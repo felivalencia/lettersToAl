@@ -45,8 +45,15 @@ export default function SignupPage() {
         try {
             await register({ username, email, password })
             router.push('/writing')
-        } catch (err) {
-            setError('Failed to create account. Please try a different username.')
+        } catch (err: any) {
+            console.error('Registration error:', err);
+            if (err.message?.includes('Username already exists')) {
+                setError('This username is already taken. Please choose another.');
+            } else if (err.message?.includes('Email already exists')) {
+                setError('This email is already registered. Please use another or login.');
+            } else {
+                setError(err.message || 'Failed to create account. Please try again.');
+            }
         }
     }
 

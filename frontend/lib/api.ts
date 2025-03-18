@@ -25,11 +25,17 @@ export interface Letter {
     username?: string;
     createdAt: string;
     embedding?: number[];
+    color?: string;
+    emotion?: string;
+    location?: string;
 }
 
 export interface CreateLetterData {
     content: string;
     isAnonymous: boolean;
+    emotion?: string;
+    color?: string;
+    location?: string;
 }
 
 // API client methods
@@ -48,11 +54,13 @@ export const api = {
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to register');
+                const errorData = await response.json();
+                console.error('Registration error:', errorData);
+                throw new Error(errorData.error || 'Failed to register');
             }
 
-            return response.json();
+            const result = await response.json();
+            return result.user;
         },
 
         // Login a user
@@ -62,16 +70,21 @@ export const api = {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify({
+                    email: data.username, // Try using username as email
+                    password: data.password
+                }),
                 credentials: 'include' // Include cookies
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to login');
+                const errorData = await response.json();
+                console.error('Login error:', errorData);
+                throw new Error(errorData.error || 'Failed to login');
             }
 
-            return response.json();
+            const result = await response.json();
+            return result.user;
         },
 
         // Logout the current user
@@ -156,21 +169,48 @@ export const api = {
 
         // Create a new letter
         async create(data: CreateLetterData): Promise<Letter> {
+            // Generate random values for missing fields
+            const letterData = {
+                ...data,
+                // Default values for missing fields
+                emotion: data.emotion || getRandomEmotion(),
+                color: data.color || getRandomColor(),
+                location: data.location || getRandomLocation()
+            };
+
+            console.log('Creating letter with data:', letterData);
+
             const response = await fetch(`${API_URL}/letters`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(data),
+                body: JSON.stringify(letterData),
                 credentials: 'include' // Include cookies for authenticated requests
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to create letter');
+                const errorData = await response.json();
+                console.error('Error creating letter:', errorData);
+                throw new Error(errorData.error || 'Failed to create letter');
             }
 
             return response.json();
         }
     }
-}; 
+};
+
+// Helper functions to generate random values
+function getRandomColor(): string {
+    const colors = ['#FFD700', '#FF6347', '#4682B4', '#32CD32', '#9370DB', '#FF69B4'];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function getRandomEmotion(): string {
+    const emotions = ['happy', 'sad', 'reflective', 'excited', 'calm', 'anxious', 'grateful'];
+    return emotions[Math.floor(Math.random() * emotions.length)];
+}
+
+function getRandomLocation(): string {
+    return `${(Math.random() * 2 - 1).toFixed(2)},${(Math.random() * 2 - 1).toFixed(2)},${(Math.random() * 2 - 1).toFixed(2)}`;
+} 

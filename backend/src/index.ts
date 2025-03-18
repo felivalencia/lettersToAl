@@ -1,5 +1,5 @@
 // First, load environment variables
-const { loadEnvironment } = require('./startup');
+import { loadEnvironment } from './startup';
 const envLoaded = loadEnvironment();
 if (!envLoaded) {
     console.warn('Starting with missing or invalid environment variables. Some functionality may not work.');
@@ -9,12 +9,9 @@ if (!envLoaded) {
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import { lettersRoutes } from './routes/lettersRoutes';
-
-// Import the auth routes and letter routes from JS files
-const authRoutes = require('./routes/authRoutes');
-const letterRoutes = require('./routes/letterRoutes');
-const cookieParser = require('cookie-parser');
+import cookieParser from 'cookie-parser';
+import authRoutes from './routes/authRoutes';
+import letterRoutes from './routes/letterRoutes';
 
 // Initialize Express app
 const app = express();
@@ -25,12 +22,24 @@ app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
 // Additional headers for better CORS handling
 app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && (origin === process.env.FRONTEND_URL || origin === 'http://localhost:3000')) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
     res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     next();
 });
 
@@ -38,8 +47,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Routes
-app.use('/api/letters', letterRoutes); // Use the JS version of letter routes
-// Add auth routes
+app.use('/api/letters', letterRoutes);
 app.use('/api/auth', authRoutes);
 
 // Health check endpoint

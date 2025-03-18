@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { ArrowLeft, LogOut, Send, User } from 'lucide-react';
+import { ArrowLeft, LogOut, Send, User, Info } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
 
@@ -17,14 +17,25 @@ export default function WritingPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user, isLoading, logout } = useAuth();
 
-    // Redirect if not logged in
+    // Check if anonymous mode is requested via URL
+    const anonymousMode = searchParams.get('anonymous') === 'true';
+
     useEffect(() => {
-        if (!isLoading && !user) {
+        // Set anonymous state based on URL parameter
+        if (anonymousMode) {
+            setIsAnonymous(true);
+        }
+    }, [anonymousMode]);
+
+    // Only redirect if not anonymous mode and not logged in
+    useEffect(() => {
+        if (!anonymousMode && !isLoading && !user) {
             router.push('/auth/login');
         }
-    }, [user, isLoading, router]);
+    }, [user, isLoading, router, anonymousMode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,9 +49,10 @@ export default function WritingPage() {
         setIsSubmitting(true);
 
         try {
+            // If we're in anonymous mode or isAnonymous is checked, submit as anonymous
             await api.letters.create({
                 content: letter,
-                isAnonymous
+                isAnonymous: anonymousMode || isAnonymous
             });
 
             router.push('/constellation');
@@ -52,7 +64,8 @@ export default function WritingPage() {
         }
     };
 
-    if (isLoading || !user) {
+    // Show loading only when not in anonymous mode and we're waiting for auth
+    if (!anonymousMode && (isLoading || (!user && !anonymousMode))) {
         return (
             <div className="writing-container">
                 <div className="loading-container">
@@ -73,21 +86,28 @@ export default function WritingPage() {
                     </Button>
                 </Link>
 
-                <div className="user-info">
-                    <Link href="/profile" className="profile-link">
-                        <User className="profile-icon" />
-                        <span className="username">{user.username}</span>
-                    </Link>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="logout-button"
-                        onClick={() => logout()}
-                    >
-                        <LogOut className="icon-left" size={14} />
-                        Logout
-                    </Button>
-                </div>
+                {user ? (
+                    <div className="user-info">
+                        <Link href="/profile" className="profile-link">
+                            <User className="profile-icon" />
+                            <span className="username">{user.username}</span>
+                        </Link>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="logout-button"
+                            onClick={() => logout()}
+                        >
+                            <LogOut className="icon-left" size={14} />
+                            Logout
+                        </Button>
+                    </div>
+                ) : anonymousMode ? (
+                    <div className="anonymous-info">
+                        <Info size={16} className="info-icon" />
+                        <span>Writing anonymously</span>
+                    </div>
+                ) : null}
 
                 <ThemeToggle />
             </div>
@@ -98,6 +118,13 @@ export default function WritingPage() {
                     Share your thoughts, feelings, or reflections. Your letter will join others in our constellation.
                 </p>
 
+                {anonymousMode && (
+                    <div className="anonymous-banner">
+                        <Info className="info-icon" />
+                        <p>You are writing anonymously. Your letter will be posted without an account.</p>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="writing-form">
                     <Textarea
                         placeholder="Dear Al..."
@@ -107,16 +134,18 @@ export default function WritingPage() {
                         rows={12}
                     />
 
-                    <div className="writing-options">
-                        <label className="anonymous-option">
-                            <input
-                                type="checkbox"
-                                checked={isAnonymous}
-                                onChange={(e) => setIsAnonymous(e.target.checked)}
-                            />
-                            <span>Post anonymously</span>
-                        </label>
-                    </div>
+                    {!anonymousMode && user && (
+                        <div className="writing-options">
+                            <label className="anonymous-option">
+                                <input
+                                    type="checkbox"
+                                    checked={isAnonymous}
+                                    onChange={(e) => setIsAnonymous(e.target.checked)}
+                                />
+                                <span>Post anonymously</span>
+                            </label>
+                        </div>
+                    )}
 
                     {error && (
                         <div className="error-message">{error}</div>
