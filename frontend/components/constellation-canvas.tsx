@@ -11,11 +11,12 @@ type StarProps = {
     size: number;
     id: string;
     username: string;
+    emotion?: string;
     connections: Array<[number, number, number]>;
-    onHover: (id: string, username: string, position: [number, number, number], isHovered: boolean) => void;
+    onHover: (id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean) => void;
 };
 
-const Star = ({ position, color, size, id, username, connections, onHover }: StarProps) => {
+const Star = ({ position, color, size, id, username, emotion, connections, onHover }: StarProps) => {
     const router = useRouter();
     const [hovered, setHovered] = useState(false);
     const starRef = useRef<THREE.Mesh>(null);
@@ -34,12 +35,12 @@ const Star = ({ position, color, size, id, username, connections, onHover }: Sta
     // Handle hover state
     const handlePointerOver = () => {
         setHovered(true);
-        onHover(id, username, position, true);
+        onHover(id, username, emotion, position, true);
     };
 
     const handlePointerOut = () => {
         setHovered(false);
-        onHover(id, username, position, false);
+        onHover(id, username, emotion, position, false);
     };
 
     useFrame(() => {
@@ -139,8 +140,8 @@ const Scene = ({
 }: {
     starData: Array<any>,
     orbitControlsRef: React.RefObject<any>,
-    onStarHover: (id: string, username: string, position: [number, number, number], isHovered: boolean) => void,
-    hoveredStar: { id: string, position: [number, number, number] } | null,
+    onStarHover: (id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean) => void,
+    hoveredStar: { id: string, username: string, emotion?: string, position: [number, number, number] } | null,
     onUpdatePosition: (position: { x: number, y: number } | null) => void
 }) => {
     const { camera } = useThree();
@@ -148,6 +149,11 @@ const Scene = ({
 
     // Calculate connections between stars
     const starsWithConnections = useMemo(() => {
+        // Calculate maximum connections based on number of stars
+        // Fewer connections when there are many stars to prevent UI clutter
+        const maxConnections = starData.length > 30 ? 1 : (starData.length > 15 ? 2 : 3);
+        const connectionThreshold = starData.length > 30 ? 0.3 : 0.5; // Smaller threshold for many stars
+
         return starData.map((star, index) => {
             const connections: Array<[number, number, number]> = [];
 
@@ -161,17 +167,16 @@ const Scene = ({
                     );
 
                     // If stars are close enough, create a connection
-                    // Only connect to 2-3 nearest stars to avoid overcrowding
-                    if (distance < 0.5) {
+                    if (distance < connectionThreshold) {
                         connections.push([otherStar.x * 1.5, otherStar.y * 1.5, otherStar.z * 1.5]);
                     }
                 }
             });
 
-            // Limit connections to avoid visual clutter (max 3 connections per star)
+            // Limit connections to avoid visual clutter
             return {
                 ...star,
-                connections: connections.slice(0, 3)
+                connections: connections.slice(0, maxConnections)
             };
         });
     }, [starData]);
@@ -204,6 +209,7 @@ const Scene = ({
                     color={star.color}
                     size={star.size}
                     username={star.username}
+                    emotion={star.emotion}
                     connections={star.connections}
                     onHover={onStarHover}
                 />
@@ -251,6 +257,7 @@ interface ConstellationCanvasProps {
         color: string;
         content: string;
         username: string;
+        emotion?: string;
     }>;
     controlsRef?: React.RefObject<ConstellationControlsRef>;
 }
@@ -260,6 +267,7 @@ export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanva
     const [hoveredStar, setHoveredStar] = useState<{
         id: string;
         username: string;
+        emotion?: string;
         position: [number, number, number];
     } | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState<{ x: number, y: number } | null>(null);
@@ -268,6 +276,7 @@ export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanva
     const handleStarHover = useCallback((
         id: string,
         username: string,
+        emotion: string | undefined,
         position: [number, number, number],
         isHovered: boolean
     ) => {
@@ -275,6 +284,7 @@ export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanva
             setHoveredStar({
                 id,
                 username,
+                emotion,
                 position
             });
         } else {
@@ -287,7 +297,17 @@ export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanva
 
     // Update tooltip position when star position changes
     const handleUpdatePosition = useCallback((position: { x: number, y: number } | null) => {
-        setTooltipPosition(position);
+        // If position is valid, ensure tooltip stays within viewport boundaries
+        if (position) {
+            // Add boundary check to prevent tooltip from going off-screen
+            const boundedPosition = {
+                x: Math.min(Math.max(position.x, 120), window.innerWidth - 120),
+                y: Math.max(position.y, 80) // Ensure tooltip is not too close to the top
+            };
+            setTooltipPosition(boundedPosition);
+        } else {
+            setTooltipPosition(null);
+        }
     }, []);
 
     // Expose camera control methods to parent component
@@ -342,12 +362,19 @@ export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanva
                     className="star-tooltip"
                     style={{
                         position: 'absolute',
-                        top: `${tooltipPosition.y - 10}px`,
+                        top: `${tooltipPosition.y - 20}px`,
                         left: `${tooltipPosition.x}px`,
                         transform: 'translate(-50%, -100%)',
+                        zIndex: 100,
+                        opacity: 0.95,
                     }}
                 >
-                    Letter by {hoveredStar.username}
+                    <div>Letter by <strong>{hoveredStar.username}</strong></div>
+                    {hoveredStar.emotion && (
+                        <div className="tooltip-emotion">
+                            Emotion: <span className="emotion-label">{hoveredStar.emotion}</span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

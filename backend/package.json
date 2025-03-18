@@ -7,7 +7,8 @@
         "start": "node dist/index.js",
         "dev": "nodemon --exec ts-node src/index.ts",
         "build": "tsc",
-        "test": "jest"
+        "test": "jest",
+        "upload-examples": "ts-node src/scripts/upload-example-letters.ts"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.39.0",

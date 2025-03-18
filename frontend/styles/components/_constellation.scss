@@ -13,7 +13,8 @@
     align-items: center;
     padding: 1rem;
     position: relative;
-    z-index: 10;
+    z-index: 30;
+    width: 100%;
 }
 
 .constellation-title {
@@ -22,6 +23,11 @@
     text-align: center;
     color: white;
     text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    flex: 1;
+    margin: 0 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .constellation-view {
@@ -93,14 +99,15 @@
     font-size: 0.875rem;
     color: white;
     text-align: center;
-    margin-top: 0.5rem;
+    margin: 0.75rem auto;
     text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 6px;
-    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 1rem;
     backdrop-filter: blur(10px);
-    max-width: 400px;
-    margin: 0.5rem auto;
+    max-width: 600px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 
     p {
         margin-bottom: 0.5rem;
@@ -134,7 +141,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 10;
+    z-index: 20;
     padding: 1rem;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
     backdrop-filter: blur(5px);
@@ -169,10 +176,11 @@
     display: flex;
     gap: 0.5rem;
     background: rgba(0, 0, 0, 0.5);
-    padding: 0.5rem;
-    border-radius: 6px;
-    backdrop-filter: blur(5px);
-    z-index: 20;
+    padding: 0.75rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    z-index: 25;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .constellation-canvas {
@@ -182,6 +190,7 @@
     width: 100%;
     height: 100%;
     z-index: 5;
+    overflow: hidden;
 
     canvas {
         width: 100% !important;
@@ -192,23 +201,34 @@
 
 .star-tooltip {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -100%);
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.85);
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
+    padding: 0.75rem 1.25rem;
+    border-radius: 6px;
     font-size: 0.875rem;
     pointer-events: none;
-    z-index: 30;
+    z-index: 50;
     white-space: nowrap;
-    backdrop-filter: blur(5px);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
     animation: fadeIn 0.2s ease;
     font-family: var(--font-playfair), serif;
     letter-spacing: 0.02em;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 120px;
+    text-align: center;
+
+    .tooltip-emotion {
+        margin-top: 0.35rem;
+        font-size: 0.8rem;
+        opacity: 0.9;
+
+        .emotion-label {
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+    }
 }
 
 .empty-constellation {
@@ -286,5 +306,184 @@
     to {
         opacity: 1;
         transform: translate(-50%, -100%);
+    }
+}
+
+/* Add media queries for smaller screens */
+@media (max-width: 768px) {
+    .constellation-header {
+        flex-wrap: wrap;
+        padding: 0.75rem;
+    }
+
+    .constellation-title {
+        order: -1;
+        width: 100%;
+        margin-bottom: 0.5rem;
+        font-size: 1.25rem;
+    }
+
+    .constellation-nav,
+    .constellation-actions {
+        flex: 1;
+    }
+
+    .constellation-actions {
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 640px) {
+    .constellation-header {
+        padding: 0.5rem;
+    }
+
+    .nav-button,
+    .control-button {
+        width: 2rem;
+        height: 2rem;
+
+        svg {
+            width: 16px;
+            height: 16px;
+        }
+    }
+
+    .constellation-title {
+        font-size: 1.25rem;
+    }
+
+    .constellation-info {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+        max-width: 90%;
+    }
+
+    .constellation-controls {
+        bottom: 1rem;
+    }
+
+    .star-tooltip {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        min-width: 100px;
+    }
+}
+
+.constellation-filters {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    margin: 0.5rem auto 1rem;
+    padding: 1rem;
+    max-width: 90%;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+
+        h3 {
+            font-size: 0.9rem;
+            color: white;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .close-filters {
+            padding: 0.25rem;
+            height: auto;
+            color: rgba(255, 255, 255, 0.7);
+
+            &:hover {
+                color: white;
+                background: rgba(255, 255, 255, 0.1);
+            }
+        }
+    }
+
+    .filters-section {
+        margin-bottom: 1rem;
+
+        h4 {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0 0 0.5rem 0;
+            font-weight: 400;
+        }
+    }
+
+    .filters-content {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+
+        .filter-button,
+        .emotion-filter-button {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            height: auto;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            &[data-variant="primary"] {
+                background: var(--color-primary);
+                color: white;
+
+                &:hover {
+                    background: var(--color-primary-dark);
+                }
+            }
+        }
+
+        .emotion-filter-button {
+            border-width: 2px;
+            border-style: solid;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+            &:hover {
+                opacity: 0.9;
+            }
+        }
+    }
+
+    .clear-filter {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        height: auto;
+        color: rgba(255, 255, 255, 0.7);
+        display: block;
+        margin: 0.75rem auto 0;
+
+        &:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+    }
+}
+
+// Responsive styles for filters
+@media (max-width: 768px) {
+    .constellation-filters {
+        padding: 0.75rem;
+        max-width: 95%;
+
+        .filters-content {
+            gap: 0.35rem;
+
+            .filter-button,
+            .clear-filter {
+                font-size: 0.75rem;
+                padding: 0.2rem 0.4rem;
+            }
+        }
     }
 }

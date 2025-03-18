@@ -20,6 +20,7 @@ rules:
       - "Name functions, variables, and components intuitively & poetically when possible (without sacrificing clarity)."
       - "Use standard ESLint + Prettier configurations across frontend/backend."
       - "Always document public APIs briefly but clearly using comments or Docstrings."
+      - "Follow established patterns for new features (e.g., emotion analysis, filtering systems)."
 
   # 🎨 Styling & SCSS
   - name: "Follow styling guidelines"
@@ -28,6 +29,7 @@ rules:
       - "Avoid inline styles completely. All styling should be in SCSS files."
       - "Stick to the defined aesthetic palette to maintain visual coherence and emotional resonance."
       - "Use SCSS variables, nesting, and mixins to create maintainable and expressive styles."
+      - "Maintain responsive designs for all components, especially the constellation view."
 
   # 🖌️ Visual & Aesthetic Integrity
   - name: "Maintain visual subtlety"
@@ -35,26 +37,47 @@ rules:
     examples:
       - "Limit dependencies—use SCSS animations and lightweight libraries (e.g., Framer Motion, Three.js) judiciously."
       - "Ask yourself: 'Does this visual decision serve the poetic and timeless quality we strive for?'"
+      - "Ensure emotion colors remain consistent and visually harmonious in all contexts."
+
+  # 🌈 Emotion Analysis & Color System
+  - name: "Maintain emotion consistency"
+    description: "Ensure emotional analysis and color mapping stays consistent throughout the application."
+    examples:
+      - "Use the established EMOTION_COLORS mapping for any new features involving emotions."
+      - "Always provide a fallback mechanism for emotion detection when external services fail."
+      - "Ensure background emotion processing never impacts user experience or performance."
+      - "Any new emotion-related features should feel natural and integrated with existing systems."
+
+  # 🌠 Constellation Visualization
+  - name: "Optimize constellation experience"
+    description: "Keep the constellation view performant, accessible, and emotionally evocative."
+    examples:
+      - "Maintain responsive design across all device sizes for the constellation."
+      - "Optimize Three.js rendering to prevent performance issues on lower-end devices."
+      - "Ensure filtering and interaction mechanisms are intuitive and discoverable."
+      - "Preserve the emotional impact of the visualization in any future enhancements."
 
   # 🚧 Restriction on External Dependencies
   - name: "Limit dependencies"
     description: "Only use dependencies explicitly chosen. All additions must be clearly justified."
     approved_dependencies:
-      frontend: ["React", "Next.js", "TypeScript", "SCSS", "Three.js", "Framer Motion", "Lucide icons"]
-      backend: ["Node.js", "Express.js", "TypeScript"]
+      frontend: ["React", "Next.js", "TypeScript", "SCSS", "Three.js", "Framer Motion", "Lucide icons", "react-three-fiber", "react-spring"]
+      backend: ["Node.js", "Express.js", "TypeScript", "OpenAI API", "jsonwebtoken", "bcrypt", "cookie-parser"]
       database: ["Supabase ecosystem"]
     forbidden:
       - "Large UI libraries (Material UI, Chakra, etc.)"
       - "CSS-in-JS libraries"
       - "Analytics & tracking dependencies"
+      - "Heavy third-party visualization libraries beyond Three.js"
 
   # 🔗 Data Handling & API Guidelines
   - name: "Follow API best practices"
     description: "Keep APIs RESTful, minimal, poetic (use semantics carefully)."
     examples:
       - "Handle minimal metadata. Do not store unnecessary user data."
-      - "Embeddings & clustering should be computed asynchronously on the backend—no heavy computation in frontend."
+      - "Emotion analysis should always be server-side—no heavy computation in frontend."
       - "API responses are small and performantly designed to help the frontend breathe, especially in the 3D visualization."
+      - "Ensure proper error handling for all API requests, especially with external services like OpenAI."
 
   # 💫 3D Visualization & Performance
   - name: "Optimize visualization"
@@ -63,6 +86,7 @@ rules:
       - "Default to optimized rendering practices (InstancedMesh, LOD techniques, etc.)."
       - "Ensure graceful degradation: Provide 2D/CSS fallback for non-supported clients."
       - "Continuously test visualization performance across multiple common devices."
+      - "Consider viewport boundaries and UI element positioning to prevent overlapping."
 
   # ✨ Interaction Philosophy & UX Flow
   - name: "Create gentle interactions"
@@ -71,13 +95,16 @@ rules:
       - "Prioritize smooth, poetic transitions instead of abrupt UI changes."
       - "No unnecessary user barriers—allow anonymous submissions without friction."
       - "Keep authentication optional and unobtrusive when integrated."
+      - "Ensure filters and controls are discoverable but not overwhelming."
 
   # 🌌 Use of AI & Emotional Clustering
   - name: "Use AI appropriately"
     description: "AI use must strictly serve the project's emotional storytelling purpose."
     examples:
-      - "Embeddings created asynchronously on submission or periodic batches; keep client-side tech lightweight."
-      - "AI outputs (clusters, color mappings) should feel organic and intuitive—not forced or complex."
+      - "OpenAI integration should be used judiciously and with appropriate fallbacks."
+      - "Emotion detection should enhance the user experience, not dictate it."
+      - "AI outputs (emotion classification, color mappings) should feel organic and intuitive."
+      - "Always maintain user privacy in AI processing—no data retention beyond essential purposes."
 
   # 🔒 Privacy & Ethical Standards
   - name: "Respect privacy"
@@ -85,6 +112,7 @@ rules:
     examples:
       - "Never integrate data tracking, user analytics, or intrusive marketing tools."
       - "Clearly communicate our minimalistic privacy stance with users through approachable language."
+      - "Ensure all data transfers are secure, especially with external API integrations."
 
   # 🌱 Evolvability, Maintainability, Longevity
   - name: "Build for maintainability"
@@ -92,6 +120,7 @@ rules:
     examples:
       - "Regularly revisit these guidelines to ensure continued adherence."
       - "Focus on readability, clarity, modularity, and comprehensive code reviews."
+      - "Document key architectural decisions and system integrations (like the emotion analysis pipeline)."
 
   # 🕰️ Timelessness & Longevity
   - name: "Choose stable technologies"
@@ -99,9 +128,12 @@ rules:
     examples:
       - "Limit reliance on rapidly-evolving experimental technologies or APIs without stable support."
       - "Regularly monitor & update dependencies, ensuring stability and security long into the future."
+      - "Balance innovation with stability—ensure core features work reliably before adding new capabilities."
 
 reflection_questions:
   - "Is this simple?"
   - "Is this maintainable?"
   - "Does this serve the poetic, emotional, and timeless experience we're committed to?"
   - "Does this choice respect our user's time, privacy, and emotional space?"
+  - "Will this feature enhance the emotional impact of the constellation view?"
+  - "Does this preserve the gentle, reflective nature of the application?"
