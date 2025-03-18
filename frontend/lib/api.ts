@@ -169,16 +169,17 @@ export const api = {
 
         // Create a new letter
         async create(data: CreateLetterData): Promise<Letter> {
-            // Generate random values for missing fields
+            // Send letter data to the backend - let it handle emotion analysis now
             const letterData = {
-                ...data,
-                // Default values for missing fields
-                emotion: data.emotion || getRandomEmotion(),
-                color: data.color || getRandomColor(),
-                location: data.location || getRandomLocation()
+                ...data
+                // We're no longer generating default values here
+                // The backend will handle emotion analysis
             };
 
-            console.log('Creating letter with data:', letterData);
+            console.log('Creating letter with data:', {
+                ...letterData,
+                content: letterData.content.substring(0, 20) + (letterData.content.length > 20 ? '...' : '')
+            });
 
             const response = await fetch(`${API_URL}/letters`, {
                 method: 'POST',
@@ -198,19 +199,4 @@ export const api = {
             return response.json();
         }
     }
-};
-
-// Helper functions to generate random values
-function getRandomColor(): string {
-    const colors = ['#FFD700', '#FF6347', '#4682B4', '#32CD32', '#9370DB', '#FF69B4'];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function getRandomEmotion(): string {
-    const emotions = ['happy', 'sad', 'reflective', 'excited', 'calm', 'anxious', 'grateful'];
-    return emotions[Math.floor(Math.random() * emotions.length)];
-}
-
-function getRandomLocation(): string {
-    return `${(Math.random() * 2 - 1).toFixed(2)},${(Math.random() * 2 - 1).toFixed(2)},${(Math.random() * 2 - 1).toFixed(2)}`;
-} 
+}; 

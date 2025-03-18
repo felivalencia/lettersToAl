@@ -140,34 +140,85 @@
 
 .writing-options {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-    margin-top: -0.5rem;
-}
+    margin-top: 1rem;
+    flex-wrap: wrap;
 
-.anonymous-option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    user-select: none;
-    padding: 0.25rem 0;
+    .emotion-selection {
+        position: relative;
+        margin-right: 1rem;
 
-    input[type="checkbox"] {
-        width: 1rem;
-        height: 1rem;
-        accent-color: var(--color-primary);
-        cursor: pointer;
+        .emotion-dropdown {
+            position: relative;
 
-        &:focus-visible {
-            outline: 2px solid var(--color-primary);
-            outline-offset: 2px;
+            .emotion-button {
+                background-color: var(--background-secondary);
+                border: 1px solid var(--border-color);
+                color: var(--text-color);
+                border-radius: 0.5rem;
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+
+                &:hover {
+                    background-color: var(--background-hover);
+                }
+            }
+
+            .emotion-dropdown-content {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                z-index: 10;
+                background-color: var(--background-secondary);
+                border: 1px solid var(--border-color);
+                border-radius: 0.5rem;
+                width: 200px;
+                max-height: 300px;
+                overflow-y: auto;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+                .emotion-option {
+                    display: block;
+                    width: 100%;
+                    text-align: left;
+                    padding: 0.5rem 1rem;
+                    background: none;
+                    border: none;
+                    color: var(--text-color);
+                    cursor: pointer;
+                    font-size: 0.9rem;
+
+                    &:hover {
+                        background-color: var(--background-hover);
+                    }
+
+                    &.selected {
+                        background-color: var(--primary-color-transparent);
+                        font-weight: bold;
+                    }
+                }
+            }
         }
     }
 
-    span {
-        font-size: 0.875rem;
-        color: var(--color-text-muted);
+    .anonymous-option {
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        cursor: pointer;
+
+        input {
+            margin-right: 0.5rem;
+        }
+
+        &:hover {
+            color: var(--text-color);
+        }
     }
 }
 

@@ -50,6 +50,7 @@ export default function WritingPage() {
 
         try {
             // If we're in anonymous mode or isAnonymous is checked, submit as anonymous
+            // The emotion will be detected automatically by the backend
             await api.letters.create({
                 content: letter,
                 isAnonymous: anonymousMode || isAnonymous
@@ -134,8 +135,9 @@ export default function WritingPage() {
                         rows={12}
                     />
 
-                    {!anonymousMode && user && (
-                        <div className="writing-options">
+                    <div className="writing-options">
+                        {/* Only show anonymous checkbox */}
+                        {!anonymousMode && user && (
                             <label className="anonymous-option">
                                 <input
                                     type="checkbox"
@@ -144,8 +146,8 @@ export default function WritingPage() {
                                 />
                                 <span>Post anonymously</span>
                             </label>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {error && (
                         <div className="error-message">{error}</div>
@@ -153,19 +155,19 @@ export default function WritingPage() {
 
                     <Button
                         type="submit"
-                        disabled={isSubmitting || !letter.trim()}
+                        disabled={isSubmitting}
                         className="submit-button"
                     >
                         {isSubmitting ? (
-                            <div className="loading-button-content">
+                            <>
                                 <LoadingSpinner size="small" />
-                                <span>Sending letter...</span>
-                            </div>
+                                <span>Submitting...</span>
+                            </>
                         ) : (
-                            <div className="button-content">
+                            <>
                                 <Send className="icon-left" />
-                                Send Letter
-                            </div>
+                                <span>Send Letter</span>
+                            </>
                         )}
                     </Button>
                 </form>

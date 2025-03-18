@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { analyzeEmotion } from './emotionService';
 
 // Define interfaces for letter data
 interface Letter {
@@ -83,18 +84,38 @@ export async function createLetter(letterData: CreateLetterData): Promise<Letter
             content: letterData.content.substring(0, 20) + (letterData.content.length > 20 ? '...' : '')
         });
 
+        // If emotion or color is not provided, analyze the content
+        if (!letterData.emotion || !letterData.color) {
+            try {
+                const analysis = await analyzeEmotion(letterData.content);
+                console.log('Emotion analysis result:', analysis);
+
+                // Only use analyzed values if not already provided
+                if (!letterData.emotion) letterData.emotion = analysis.emotion;
+                if (!letterData.color) letterData.color = analysis.color;
+            } catch (analysisError) {
+                console.error('Error during emotion analysis:', analysisError);
+                // Continue with default or existing values
+            }
+        }
+
+        // Generate random location if not provided
+        if (!letterData.location) {
+            letterData.location = generateRandomLocation();
+        }
+
         // Prepare letter data, handling potential missing columns
         const letterRecord: any = {
             content: letterData.content,
             is_anonymous: letterData.isAnonymous,
-            user_id: letterData.userId
+            user_id: letterData.userId,
+            emotion: letterData.emotion,
+            color: letterData.color,
+            location: letterData.location
         };
 
         // Only add these fields if they're provided
         if (username) letterRecord.username = username;
-        if (letterData.emotion) letterRecord.emotion = letterData.emotion;
-        if (letterData.color) letterRecord.color = letterData.color;
-        if (letterData.location) letterRecord.location = letterData.location;
         if (letterData.embedding) letterRecord.embedding = letterData.embedding;
 
         // Insert the letter
@@ -257,4 +278,15 @@ export async function getLettersByUserId(userId: string): Promise<Letter[]> {
         embedding: letter.embedding,
         created_at: letter.created_at
     }));
+}
+
+/**
+ * Generate a random 3D location for the letter
+ * @returns A string with x,y,z coordinates between -1 and 1
+ */
+function generateRandomLocation(): string {
+    const x = (Math.random() * 2 - 1).toFixed(3);
+    const y = (Math.random() * 2 - 1).toFixed(3);
+    const z = (Math.random() * 2 - 1).toFixed(3);
+    return `${x},${y},${z}`;
 } 
