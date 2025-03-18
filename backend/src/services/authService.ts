@@ -12,7 +12,8 @@ interface User {
     created_at: string;
 }
 
-interface AuthUser {
+// Export this interface so it can be used in type declarations
+export interface AuthUser {
     id: string;
     username: string;
     email?: string;

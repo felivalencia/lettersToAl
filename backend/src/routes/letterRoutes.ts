@@ -1,25 +1,32 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import { Request, Response, NextFunction } from 'express';
 import * as letterService from '../services/letterService';
 import * as authService from '../services/authService';
+import { AuthUser } from '../services/authService';
+
+// Create an interface that extends Express Request
+interface AuthenticatedRequest extends Request {
+  user?: AuthUser;
+}
 
 const router = express.Router();
 
 // Authentication middleware
-const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies.auth_token;
-    
+
     if (!token) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     const user = await authService.verifyToken(token);
-    
+
     if (!user) {
       res.clearCookie('auth_token');
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
-    
+
     req.user = user;
     next();
   } catch (error) {
@@ -41,11 +48,11 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const letter = await letterService.getLetterById(req.params.id);
-    
+
     if (!letter) {
       return res.status(404).json({ error: 'Letter not found' });
     }
-    
+
     res.json(letter);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to fetch letter' });
@@ -53,28 +60,28 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // Create a new letter
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { content, emotion, color, location, isAnonymous } = req.body;
-    
+
     // If letter is not anonymous, require authentication
     if (!isAnonymous) {
       const token = req.cookies.auth_token;
-      
+
       if (!token) {
         return res.status(401).json({ error: 'Authentication required for non-anonymous letters' });
       }
-      
+
       const user = await authService.verifyToken(token);
-      
+
       if (!user) {
         res.clearCookie('auth_token');
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
-      
+
       req.user = user;
     }
-    
+
     const letter = await letterService.createLetter({
       content,
       emotion,
@@ -83,7 +90,7 @@ router.post('/', async (req: Request, res: Response) => {
       userId: req.user?.id || null,
       isAnonymous: isAnonymous || !req.user?.id
     });
-    
+
     res.status(201).json(letter);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to create letter' });
@@ -91,12 +98,12 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Get letters by user ID (requires authentication)
-router.get('/user/me', authenticate, async (req: Request, res: Response) => {
+router.get('/user/me', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'User ID not found' });
     }
-    
+
     const letters = await letterService.getLettersByUserId(req.user.id);
     res.json(letters);
   } catch (error: any) {

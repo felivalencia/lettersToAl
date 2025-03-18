@@ -14,7 +14,6 @@ ALTER TABLE letters ADD COLUMN IF NOT EXISTS location VARCHAR;
 ALTER TABLE letters ADD COLUMN IF NOT EXISTS username VARCHAR;
 
 -- Ensure the emotional_vector column exists (in case it was renamed)
--- This is a no-op if the column already exists
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
