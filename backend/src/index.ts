@@ -1,10 +1,20 @@
+// First, load environment variables
+const { loadEnvironment } = require('./startup');
+const envLoaded = loadEnvironment();
+if (!envLoaded) {
+    console.warn('Starting with missing or invalid environment variables. Some functionality may not work.');
+}
+
+// Then import everything else
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import path from 'path';
 import { lettersRoutes } from './routes/lettersRoutes';
 
-// Load environment variables
-dotenv.config();
+// Import the auth routes and letter routes from JS files
+const authRoutes = require('./routes/authRoutes');
+const letterRoutes = require('./routes/letterRoutes');
+const cookieParser = require('cookie-parser');
 
 // Initialize Express app
 const app = express();
@@ -25,15 +35,33 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
-app.use('/api/letters', lettersRoutes);
+app.use('/api/letters', letterRoutes); // Use the JS version of letter routes
+// Add auth routes
+app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'ok',
         message: 'Letters to Al API is running'
+    });
+});
+
+// Debugging route to verify server is responding
+app.get('/api/debug', (req, res) => {
+    res.status(200).json({
+        message: 'API is working correctly',
+        timestamp: new Date().toISOString(),
+        env: {
+            nodeEnv: process.env.NODE_ENV,
+            port: process.env.PORT,
+            frontendUrl: process.env.FRONTEND_URL,
+            supabaseUrlExists: !!process.env.SUPABASE_URL,
+            jwtSecretExists: !!process.env.JWT_SECRET
+        }
     });
 });
 

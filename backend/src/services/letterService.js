@@ -1,15 +1,21 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_SERVICE_KEY env variables.');
-  process.exit(1);
+// Helper function to get Supabase client when needed
+function getSupabaseClient() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase credentials. Check your .env file.');
+  }
+  
+  try {
+    return createClient(supabaseUrl, supabaseKey);
+  } catch (error) {
+    console.error('Error creating Supabase client:', error);
+    throw new Error('Failed to initialize Supabase client');
+  }
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Create a new letter
@@ -22,33 +28,52 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  */
 async function createLetter(letterData) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { content, isAnonymous, userId, embedding } = letterData;
     
     const letterRecord = {
       content,
       is_anonymous: isAnonymous,
       user_id: isAnonymous ? null : userId
-    };
+    }
     
-    // Add embedding if available
+    // Add embedding if provided
     if (embedding) {
       letterRecord.emotional_vector = embedding;
     }
     
     const { data, error } = await supabase
       .from('letters')
-      .insert(letterRecord)
-      .select()
-      .single();
+      .insert([letterRecord])
+      .select();
     
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+    
+    // Fetch username if letter is not anonymous and has a user_id
+    let username = null;
+    if (!isAnonymous && userId) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('username')
+        .eq('id', userId)
+        .single();
+      
+      if (!userError && userData) {
+        username = userData.username;
+      }
+    }
     
     return {
-      id: data.id,
-      content: data.content,
-      isAnonymous: data.is_anonymous,
-      userId: data.user_id,
-      createdAt: data.created_at
+      id: data[0].id,
+      content: data[0].content,
+      isAnonymous: data[0].is_anonymous,
+      userId: data[0].user_id,
+      username,
+      createdAt: data[0].created_at,
+      embedding: data[0].emotional_vector
     };
   } catch (error) {
     console.error('Error creating letter:', error);
@@ -62,6 +87,8 @@ async function createLetter(letterData) {
  */
 async function getAllLetters() {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase
       .from('letters')
       .select(`
@@ -101,6 +128,8 @@ async function getAllLetters() {
  */
 async function getLetterById(id) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase
       .from('letters')
       .select(`
@@ -141,6 +170,8 @@ async function getLetterById(id) {
  */
 async function getLettersByUserId(userId) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase
       .from('letters')
       .select(`

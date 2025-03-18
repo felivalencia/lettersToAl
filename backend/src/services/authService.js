@@ -1,16 +1,28 @@
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+// JWT secret key - should be in .env in production
+const JWT_SECRET = process.env.JWT_SECRET || 'letters-to-al-secret-key';
+const SALT_ROUNDS = 10;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_SERVICE_KEY env variables.');
-  process.exit(1);
+// Helper function to get Supabase client when needed
+function getSupabaseClient() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase credentials. Check your .env file.');
+  }
+  
+  try {
+    return createClient(supabaseUrl, supabaseKey);
+  } catch (error) {
+    console.error('Error creating Supabase client:', error);
+    throw new Error('Failed to initialize Supabase client');
+  }
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Register a new user
@@ -21,37 +33,54 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  */
 async function registerUser(username, email, password) {
   try {
-    // Call the Supabase function we created to register a user
-    const { data, error } = await supabase.rpc('create_user', {
-      username,
-      email,
-      password
-    });
-
-    if (error) throw error;
-
-    // Create a JWT token using the session
-    const { data: tokenData, error: tokenError } = await supabase.auth.signUp({
-      email: email || `${username}@lettertoal.fake`, // Use real email or generate a fake one
-      password: password,
-      options: {
-        data: {
-          username,
-          user_id: data // Pass the user ID from our custom function
+    const supabase = getSupabaseClient();
+    
+    // Check if username already exists
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('username')
+      .eq('username', username);
+    
+    if (existingUsers && existingUsers.length > 0) {
+      throw new Error('Username already exists');
+    }
+    
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    
+    // Insert the new user
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert([
+        { 
+          username, 
+          email, 
+          password_hash: hashedPassword 
         }
-      }
-    });
-
-    if (tokenError) throw tokenError;
-
+      ])
+      .select();
+    
+    if (error) {
+      throw error;
+    }
+    
+    if (!user || user.length === 0) {
+      throw new Error('Failed to create user');
+    }
+    
+    // Generate JWT token
+    const accessToken = jwt.sign({ userId: user[0].id }, JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = crypto.randomBytes(40).toString('hex');
+    
     return {
-      id: data,
-      username,
-      email,
-      accessToken: tokenData?.session?.access_token
+      id: user[0].id,
+      username: user[0].username,
+      email: user[0].email,
+      accessToken,
+      refreshToken
     };
   } catch (error) {
-    console.error('Error registering user:', error);
+    console.error('Registration error:', error);
     throw error;
   }
 }
@@ -60,89 +89,90 @@ async function registerUser(username, email, password) {
  * Login a user
  * @param {string} username - The user's username
  * @param {string} password - The user's password
- * @returns {Promise<Object>} - User data and tokens or error
+ * @returns {Promise<Object>} - User data with access token or error
  */
 async function loginUser(username, password) {
   try {
-    // First authenticate the user with our custom function
-    const { data, error } = await supabase.rpc('authenticate_user', {
-      input_username: username,
-      input_password: password
-    });
-
-    if (error || !data.length) {
-      throw new Error('Invalid credentials');
-    }
-
-    // User is authenticated, now get the email
-    const { data: userData, error: userError } = await supabase
+    const supabase = getSupabaseClient();
+    
+    // Get user by username
+    const { data: users, error } = await supabase
       .from('users')
-      .select('email')
-      .eq('id', data[0].id)
-      .single();
-
-    if (userError) throw userError;
-
-    // Generate a session
-    const { data: tokenData, error: tokenError } = await supabase.auth.signInWithPassword({
-      email: userData.email || `${username}@lettertoal.fake`,
-      password
-    });
-
-    if (tokenError) throw tokenError;
-
+      .select('*')
+      .eq('username', username);
+    
+    if (error) {
+      throw error;
+    }
+    
+    if (!users || users.length === 0) {
+      throw new Error('User not found');
+    }
+    
+    const user = users[0];
+    
+    // Check password
+    const passwordValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!passwordValid) {
+      throw new Error('Invalid password');
+    }
+    
+    // Generate JWT token
+    const accessToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const refreshToken = crypto.randomBytes(40).toString('hex');
+    
     return {
-      id: data[0].id,
-      username: data[0].username,
-      accessToken: tokenData?.session?.access_token,
-      refreshToken: tokenData?.session?.refresh_token
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      accessToken,
+      refreshToken
     };
   } catch (error) {
-    console.error('Error logging in user:', error);
+    console.error('Login error:', error);
     throw error;
   }
 }
 
 /**
- * Logout a user by invalidating their token
- * @param {string} token - The user's access token
- * @returns {Promise<boolean>} - Success status
+ * Logout a user (invalidate their token)
+ * @param {string} token - The token to invalidate
+ * @returns {Promise<void>}
  */
 async function logoutUser(token) {
-  try {
-    // Set the auth token in the client
-    supabase.auth.setAuth(token);
-    
-    // Sign out
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) throw error;
-    
-    return true;
-  } catch (error) {
-    console.error('Error logging out user:', error);
-    throw error;
-  }
+  // In a real implementation, you might want to add the token to a blacklist
+  // or invalidate it in some way. For this simple implementation, we'll
+  // just return a successful response.
+  return Promise.resolve();
 }
 
 /**
- * Verify a user's token
- * @param {string} token - The user's access token
- * @returns {Promise<Object>} - User data or null
+ * Verify a token and get user data
+ * @param {string} token - The JWT token to verify
+ * @returns {Promise<Object|null>} - User data or null if invalid
  */
 async function verifyToken(token) {
   try {
-    const { data, error } = await supabase.auth.getUser(token);
+    const supabase = getSupabaseClient();
     
-    if (error || !data.user) return null;
+    // Verify the token
+    const decoded = jwt.verify(token, JWT_SECRET);
     
-    return {
-      id: data.user.id,
-      username: data.user.user_metadata.username,
-      email: data.user.email
-    };
+    // Get user from database
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, username, email')
+      .eq('id', decoded.userId)
+      .single();
+    
+    if (error || !user) {
+      return null;
+    }
+    
+    return user;
   } catch (error) {
-    console.error('Error verifying token:', error);
+    console.error('Token verification error:', error);
     return null;
   }
 }
