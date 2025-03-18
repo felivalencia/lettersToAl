@@ -17,7 +17,7 @@ Letters to Al is not primarily a technological showcase, but a timeless, human-c
 
 ### Frontend
 - Next.js with React & TypeScript
-- Tailwind CSS for styling
+- SCSS for maintainable, expressive styling
 - Three.js for 3D visualization
 - Framer Motion for animations
 
@@ -104,6 +104,7 @@ npm run dev
 3. **Subtle Aesthetics**: Visual elements enhance without overwhelming
 4. **Privacy-Focused**: Minimal data collection, anonymous by default
 5. **Accessibility**: Available to everyone, graceful degradation
+6. **Clean Styling**: No inline styles, everything in SCSS for readability and maintainability
 
 ## 🤝 Contributing
 

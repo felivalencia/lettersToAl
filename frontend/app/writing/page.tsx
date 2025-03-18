@@ -1,84 +1,146 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import WritingArea from '../../components/writing-area';
-import { letterApi } from '../../lib/apiClient';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ArrowLeft, LogOut, Send, User } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
+import { api } from '@/lib/api';
 
 export default function WritingPage() {
+    const [letter, setLetter] = useState('');
+    const [isAnonymous, setIsAnonymous] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState('');
+    const router = useRouter();
+    const { user, isLoading, logout } = useAuth();
 
-    const handleSubmitLetter = async (content: string, isAnonymous: boolean) => {
+    // Redirect if not logged in
+    useEffect(() => {
+        if (!isLoading && !user) {
+            router.push('/auth/login');
+        }
+    }, [user, isLoading, router]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (!letter.trim()) {
+            setError('Please write something before submitting');
+            return;
+        }
+
+        setIsSubmitting(true);
+
         try {
-            setIsSubmitting(true);
-            setError(null);
+            await api.letters.create({
+                content: letter,
+                isAnonymous
+            });
 
-            await letterApi.submitLetter(content, isAnonymous);
-
-            return Promise.resolve();
-        } catch (error) {
-            console.error('Error submitting letter:', error);
-            setError('Failed to send your letter. Please try again later.');
-            return Promise.reject(error);
+            router.push('/constellation');
+        } catch (err) {
+            console.error('Failed to submit letter', err);
+            setError('Failed to submit your letter. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    return (
-        <main className="min-h-screen flex flex-col">
-            <div className="absolute top-4 left-4 z-10">
-                <Link href="/" className="btn btn-secondary text-sm px-3 py-1">
-                    ← Back Home
-                </Link>
+    if (isLoading || !user) {
+        return (
+            <div className="writing-container">
+                <div className="loading-container">
+                    <LoadingSpinner size="large" />
+                    <p className="loading-text">Loading...</p>
+                </div>
             </div>
+        );
+    }
 
-            <div className="flex-1 flex flex-col items-center justify-center px-4 py-12 relative">
-                {/* Background stars */}
-                <div className="absolute inset-0 overflow-hidden">
-                    {Array.from({ length: 30 }).map((_, i) => (
-                        <div
-                            key={i}
-                            className="star animate-star-pulse"
-                            style={{
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                width: `${Math.max(1, Math.random() * 3)}px`,
-                                height: `${Math.max(1, Math.random() * 3)}px`,
-                                animationDelay: `${Math.random() * 4}s`
-                            }}
-                        />
-                    ))}
+    return (
+        <div className="writing-container">
+            <div className="nav-container">
+                <Link href="/">
+                    <Button variant="ghost" className="back-button">
+                        <ArrowLeft className="icon-left" />
+                        Back to Home
+                    </Button>
+                </Link>
+
+                <div className="user-info">
+                    <Link href="/profile" className="profile-link">
+                        <User className="profile-icon" />
+                        <span className="username">{user.username}</span>
+                    </Link>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="logout-button"
+                        onClick={() => logout()}
+                    >
+                        <LogOut className="icon-left" size={14} />
+                        Logout
+                    </Button>
                 </div>
 
-                <div className="max-w-2xl w-full">
-                    <h1 className="text-4xl font-serif mb-8 text-center">
-                        Write Your Letter
-                    </h1>
+                <ThemeToggle />
+            </div>
 
-                    <p className="text-center mb-10 text-starlight text-opacity-80 max-w-xl mx-auto">
-                        Share your thoughts, feelings, hopes, or reflections.
-                        Your words will join others in our cosmic constellation.
-                    </p>
+            <div className="writing-content">
+                <h1 className="writing-title">Write a Letter to Al</h1>
+                <p className="writing-description">
+                    Share your thoughts, feelings, or reflections. Your letter will join others in our constellation.
+                </p>
 
-                    <WritingArea
-                        onSubmit={handleSubmitLetter}
+                <form onSubmit={handleSubmit} className="writing-form">
+                    <Textarea
+                        placeholder="Dear Al..."
+                        value={letter}
+                        onChange={(e) => setLetter(e.target.value)}
+                        className="writing-textarea"
+                        rows={12}
                     />
 
-                    {error && (
-                        <div className="mt-6 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-4">
-                            <p>{error}</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+                    <div className="writing-options">
+                        <label className="anonymous-option">
+                            <input
+                                type="checkbox"
+                                checked={isAnonymous}
+                                onChange={(e) => setIsAnonymous(e.target.checked)}
+                            />
+                            <span>Post anonymously</span>
+                        </label>
+                    </div>
 
-            <footer className="py-4 px-6 text-center text-sm text-starlight text-opacity-70 backdrop-blur-sm">
-                <p>
-                    Your words will find their place among the stars.
-                </p>
-            </footer>
-        </main>
+                    {error && (
+                        <div className="error-message">{error}</div>
+                    )}
+
+                    <Button
+                        type="submit"
+                        disabled={isSubmitting || !letter.trim()}
+                        className="submit-button"
+                    >
+                        {isSubmitting ? (
+                            <div className="loading-button-content">
+                                <LoadingSpinner size="small" />
+                                <span>Sending letter...</span>
+                            </div>
+                        ) : (
+                            <div className="button-content">
+                                <Send className="icon-left" />
+                                Send Letter
+                            </div>
+                        )}
+                    </Button>
+                </form>
+            </div>
+        </div>
     );
 } 

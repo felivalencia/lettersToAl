@@ -21,30 +21,31 @@ rules:
       - "Use standard ESLint + Prettier configurations across frontend/backend."
       - "Always document public APIs briefly but clearly using comments or Docstrings."
 
-  # 🎨 Styling & Tailwind CSS
+  # 🎨 Styling & SCSS
   - name: "Follow styling guidelines"
-    description: "Centralize all styling in our global styles/globals.css file wherever possible."
+    description: "Centralize all styling in our global styles/globals.scss file wherever possible."
     examples:
-      - "Avoid inline styles unless necessary for dynamic interactions or animations."
+      - "Avoid inline styles completely. All styling should be in SCSS files."
       - "Stick to the defined aesthetic palette to maintain visual coherence and emotional resonance."
-      - "Leverage clear Tailwind conventions (@apply) over individual class-manipulations."
+      - "Use SCSS variables, nesting, and mixins to create maintainable and expressive styles."
 
   # 🖌️ Visual & Aesthetic Integrity
   - name: "Maintain visual subtlety"
     description: "Prioritize subtlety: animations, interactions, and visual effects should gently serve emotional resonance, never overwhelm or distract."
     examples:
-      - "Limit dependencies—use pure CSS animations and lightweight libraries (e.g., Framer Motion, Three.js) judiciously."
+      - "Limit dependencies—use SCSS animations and lightweight libraries (e.g., Framer Motion, Three.js) judiciously."
       - "Ask yourself: 'Does this visual decision serve the poetic and timeless quality we strive for?'"
 
   # 🚧 Restriction on External Dependencies
   - name: "Limit dependencies"
     description: "Only use dependencies explicitly chosen. All additions must be clearly justified."
     approved_dependencies:
-      frontend: ["React", "Next.js", "TypeScript", "Tailwind CSS", "Three.js", "Framer Motion", "Lucide icons"]
+      frontend: ["React", "Next.js", "TypeScript", "SCSS", "Three.js", "Framer Motion", "Lucide icons"]
       backend: ["Node.js", "Express.js", "TypeScript"]
       database: ["Supabase ecosystem"]
     forbidden:
       - "Large UI libraries (Material UI, Chakra, etc.)"
+      - "CSS-in-JS libraries"
       - "Analytics & tracking dependencies"
 
   # 🔗 Data Handling & API Guidelines

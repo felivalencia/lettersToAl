@@ -1,0 +1,212 @@
+.writing-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--color-background);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    position: relative;
+    z-index: 10;
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .icon-left {
+        width: 1rem;
+        height: 1rem;
+    }
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+
+    .profile-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+            background-color: var(--color-background-hover);
+        }
+
+        .profile-icon {
+            width: 1rem;
+            height: 1rem;
+            opacity: 0.7;
+        }
+    }
+
+    .username {
+        font-weight: 600;
+        color: var(--color-primary);
+    }
+
+    .logout-button {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        height: auto;
+        opacity: 0.8;
+        transition: opacity 0.3s ease;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}
+
+.writing-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.writing-title {
+    font-family: var(--font-playfair), serif;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.writing-description {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    margin-bottom: 2rem;
+    max-width: 600px;
+}
+
+.writing-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.writing-textarea {
+    width: 100%;
+    min-height: 300px;
+    resize: vertical;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: var(--color-background-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-family: var(--font-space-mono), monospace;
+    line-height: 1.6;
+    transition: border-color 0.3s ease;
+
+    &:focus {
+        border-color: var(--color-primary);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+    }
+}
+
+.writing-options {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: -0.5rem;
+}
+
+.anonymous-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+
+    input[type="checkbox"] {
+        appearance: none;
+        width: 1rem;
+        height: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.25rem;
+        background-color: var(--color-background-input);
+        position: relative;
+        cursor: pointer;
+
+        &:checked {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+
+            &::after {
+                content: '';
+                position: absolute;
+                left: 0.25rem;
+                top: 0.125rem;
+                width: 0.375rem;
+                height: 0.5rem;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+    }
+}
+
+.submit-button {
+    align-self: flex-end;
+    min-width: 150px;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    height: 100%;
+}
+
+@media (max-width: 640px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+
+    .user-info {
+        order: 2;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .theme-toggle-container {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+
+    .writing-title {
+        font-size: 2rem;
+    }
+}

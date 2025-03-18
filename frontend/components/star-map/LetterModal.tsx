@@ -65,7 +65,7 @@ export default function LetterModal({ letter, onClose }: LetterModalProps) {
         <div className="letter-modal">
             <motion.div
                 ref={modalRef}
-                className="letter-content"
+                className="letter-content relative"
                 style={{
                     borderColor: letter.color,
                     boxShadow: `0 0 30px ${letter.color}30`
@@ -73,29 +73,41 @@ export default function LetterModal({ letter, onClose }: LetterModalProps) {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                transition={{
+                    type: 'spring',
+                    stiffness: 300,
+                    damping: 30
+                }}
             >
                 <button
-                    className="absolute top-4 right-4 text-starlight text-opacity-70 hover:text-opacity-100"
+                    className="absolute top-4 right-4 text-starlight opacity-70 hover:opacity-100 transition-opacity duration-300"
                     onClick={onClose}
+                    aria-label="Close"
                 >
                     <X className="h-5 w-5" />
                 </button>
 
-                <div className="mb-6">
+                <div className="mb-6 flex items-center space-x-2">
                     <div
-                        className="h-3 w-3 rounded-full mb-2"
-                        style={{ backgroundColor: letter.color }}
+                        className="h-3 w-3 rounded-full"
+                        style={{
+                            backgroundColor: letter.color,
+                            boxShadow: `0 0 8px ${letter.color}`
+                        }}
                     />
-                    <div className="text-sm text-starlight text-opacity-70">
+                    <div className="text-sm text-starlight opacity-70 font-serif italic">
                         {formatDate(letter.createdAt)}
                     </div>
                 </div>
 
                 <div className="prose prose-invert max-w-none">
-                    <p className="whitespace-pre-line leading-relaxed">
+                    <p className="whitespace-pre-line leading-relaxed text-starlight">
                         {letter.content}
                     </p>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-starlight border-opacity-10 text-xs text-starlight opacity-50 text-right italic">
+                    "Words cast into the cosmos"
                 </div>
             </motion.div>
         </div>

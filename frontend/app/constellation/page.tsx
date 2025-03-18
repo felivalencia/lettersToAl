@@ -1,70 +1,133 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-// Dynamically import the StarMap component to avoid SSR issues with Three.js
-const StarMap = dynamic(
-    () => import('../../components/star-map/StarMap'),
-    { ssr: false }
-);
+import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ArrowLeft, RefreshCw, Home, Pen, User } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
+import { api } from '@/lib/api';
 
 export default function ConstellationPage() {
-    const [isLoading, setIsLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [letters, setLetters] = useState<Array<{
+        id: string;
+        x: number;
+        y: number;
+        z: number;
+        size: number;
+        color: string;
+        content: string;
+        username: string;
+    }>>([]);
+    const { user } = useAuth();
 
     useEffect(() => {
-        // Simulate loading data
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 1500);
+        // Fetch all letters and create the constellation
+        const fetchLetters = async () => {
+            try {
+                const allLetters = await api.letters.getAll();
 
-        return () => clearTimeout(timer);
+                // Generate random positions and colors for the letters
+                const starLetters = allLetters.map(letter => ({
+                    id: letter.id,
+                    x: Math.random() * 2 - 1, // -1 to 1
+                    y: Math.random() * 2 - 1, // -1 to 1
+                    z: Math.random() * 2 - 1, // -1 to 1
+                    size: Math.random() * 2 + 0.5, // 0.5 to 2.5
+                    color: getRandomColor(),
+                    content: letter.content,
+                    username: letter.username || 'Anonymous'
+                }));
+
+                setLetters(starLetters);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching letters:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchLetters();
     }, []);
 
+    // Generate a random color from our nebula palette
+    const getRandomColor = () => {
+        const colors = [
+            '#6e44ff', // nebula-purple
+            '#4285f4', // nebula-blue
+            '#36bfb1', // nebula-teal
+            '#ff66c4', // nebula-pink
+            '#ff9e44'  // nebula-orange
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    };
+
     return (
-        <main className="min-h-screen flex flex-col">
-            <div className="absolute top-4 left-4 z-10">
-                <Link href="/" className="btn btn-secondary text-sm px-3 py-1">
-                    ← Back Home
-                </Link>
+        <div className="constellation-fullscreen">
+            <div className="constellation-overlay">
+                <div className="constellation-header">
+                    <div className="constellation-nav">
+                        <Link href="/">
+                            <Button variant="ghost" size="icon" className="nav-button" title="Home">
+                                <Home size={20} />
+                            </Button>
+                        </Link>
+
+                        <Link href="/writing">
+                            <Button variant="ghost" size="icon" className="nav-button" title="Write a letter">
+                                <Pen size={20} />
+                            </Button>
+                        </Link>
+
+                        {user && (
+                            <Link href="/profile">
+                                <Button variant="ghost" size="icon" className="nav-button" title="Your profile">
+                                    <User size={20} />
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+
+                    <h1 className="constellation-title">Stellar Constellation</h1>
+
+                    <ThemeToggle />
+                </div>
+
+                <div className="constellation-info">
+                    <p>Each star represents a letter. Click on any star to read its contents.</p>
+                </div>
             </div>
 
-            {isLoading ? (
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <h2 className="text-2xl mb-4">Mapping the stars...</h2>
-                        <div className="relative w-16 h-16 mx-auto">
-                            <div className="star-cluster">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="star animate-star-pulse"
-                                        style={{
-                                            top: `${Math.sin(i / 5 * Math.PI * 2) * 30 + 50}%`,
-                                            left: `${Math.cos(i / 5 * Math.PI * 2) * 30 + 50}%`,
-                                            width: '4px',
-                                            height: '4px',
-                                            animationDelay: `${i * 0.2}s`
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+            {loading ? (
+                <div className="loading-container">
+                    <LoadingSpinner size="large" />
+                    <p className="loading-text">Generating constellation...</p>
                 </div>
             ) : (
-                <div className="flex-1 relative">
-                    <StarMap />
+                <div className="constellation-canvas">
+                    {/* This will be replaced with a Three.js canvas eventually */}
+                    <div className="fallback-stars">
+                        {letters.map((star) => (
+                            <Link href={`/letters/${star.id}`} key={star.id}>
+                                <div
+                                    className="constellation-star"
+                                    style={{
+                                        left: `${(star.x + 1) * 50}%`,
+                                        top: `${(star.y + 1) * 50}%`,
+                                        width: `${star.size}px`,
+                                        height: `${star.size}px`,
+                                        backgroundColor: star.color,
+                                        zIndex: Math.floor((star.z + 1) * 50)
+                                    }}
+                                    title={`Letter by ${star.username}`}
+                                />
+                            </Link>
+                        ))}
+                    </div>
                 </div>
             )}
-
-            <footer className="py-4 px-6 text-center text-sm text-starlight text-opacity-70 backdrop-blur-sm">
-                <p className="max-w-md mx-auto">
-                    Each star represents a letter. Closer stars share similar emotions.
-                    Click on stars to read their messages.
-                </p>
-            </footer>
-        </main>
+        </div>
     );
 } 

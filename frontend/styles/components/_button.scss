@@ -1,0 +1,125 @@
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-inter), sans-serif;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+
+    &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+}
+
+/* Button variants */
+.button-primary {
+    background-color: var(--color-primary);
+    color: white;
+
+    &:hover {
+        background-color: var(--color-primary-hover);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        background-color: var(--color-primary-active);
+        transform: translateY(0);
+    }
+}
+
+.button-secondary {
+    background-color: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-primary);
+
+    &:hover {
+        background-color: rgba(var(--color-primary-rgb), 0.1);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        background-color: rgba(var(--color-primary-rgb), 0.2);
+        transform: translateY(0);
+    }
+}
+
+.button-outline {
+    background-color: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+
+    &:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        border-color: var(--color-primary-active);
+        background-color: rgba(var(--color-primary-rgb), 0.05);
+        transform: translateY(0);
+    }
+}
+
+.button-ghost {
+    background-color: transparent;
+    color: var(--color-text);
+
+    &:hover {
+        background-color: var(--color-background-hover);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        background-color: var(--color-background-active);
+        transform: translateY(0);
+    }
+}
+
+.button-icon {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: rgba(var(--color-background-hover-rgb), 0.1);
+    border: 1px solid rgba(var(--color-border-rgb), 0.3);
+
+    &:hover {
+        background-color: rgba(var(--color-background-hover-rgb), 0.2);
+    }
+}
+
+/* Button sizes */
+.button-sm {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.button-md {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.button-lg {
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+}
+
+.button-icon {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    line-height: 0;
+
+    svg {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+}

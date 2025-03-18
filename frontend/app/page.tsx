@@ -1,56 +1,73 @@
+'use client';
+
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Star } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
     return (
-        <main className="min-h-screen flex flex-col">
-            <div className="flex-1 flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
-                {/* Background stars */}
-                <div className="absolute inset-0 overflow-hidden">
-                    {Array.from({ length: 50 }).map((_, i) => (
-                        <div
-                            key={i}
-                            className="star animate-star-pulse"
-                            style={{
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                width: `${Math.max(1, Math.random() * 3)}px`,
-                                height: `${Math.max(1, Math.random() * 3)}px`,
-                                animationDelay: `${Math.random() * 4}s`
-                            }}
-                        />
-                    ))}
-                </div>
+        <main className="home-container">
+            <div className="theme-toggle-container">
+                <ThemeToggle />
+            </div>
 
-                <h1 className="text-5xl md:text-7xl font-serif mb-6 text-center">
+            <div className="hero-content">
+                <h1 className="hero-title">
                     Letters to Al
                 </h1>
 
-                <p className="text-xl md:text-2xl text-center max-w-2xl mb-12 text-opacity-90 leading-relaxed">
-                    Write your thoughts to the universe. Watch them join a constellation of shared human experiences.
+                <p className="hero-subtitle">
+                    A constellation of human thoughts, feelings, and reflections
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <Link
-                        href="/writing"
-                        className="btn btn-primary text-center"
-                    >
-                        Write a Letter
+                <p className="hero-description">
+                    Write an anonymous letter that joins a cosmic tapestry of shared human experiences,
+                    each one a star in our interactive constellation.
+                </p>
+
+                <div className="hero-buttons">
+                    <Link href="/auth/login">
+                        <Button variant="primary" size="lg">
+                            Sign In
+                        </Button>
                     </Link>
 
-                    <Link
-                        href="/constellation"
-                        className="btn btn-secondary text-center"
-                    >
-                        Explore Constellation
+                    <Link href="/constellation">
+                        <Button variant="outline" size="lg">
+                            Explore Constellation
+                            <Star className="icon-right" />
+                        </Button>
                     </Link>
                 </div>
             </div>
 
-            <footer className="py-8 text-center text-starlight text-opacity-70">
-                <p>
-                    A space for human expression, connection, and reflection
-                </p>
-            </footer>
+            <div className="star-background">
+                <StarBackground />
+            </div>
         </main>
+    );
+}
+
+function StarBackground() {
+    // Create 100 stars with random positions and animation delays
+    return (
+        <div className="stars-container">
+            {Array.from({ length: 100 }).map((_, i) => (
+                <div
+                    key={i}
+                    className="star-bg"
+                    style={{
+                        top: `${Math.random() * 100}%`,
+                        left: `${Math.random() * 100}%`,
+                        width: `${Math.max(1, Math.random() * 3)}px`,
+                        height: `${Math.max(1, Math.random() * 3)}px`,
+                        opacity: Math.random() * 0.7 + 0.3,
+                        animationDelay: `${Math.random() * 5}s`,
+                        animationDuration: `${Math.random() * 5 + 3}s`
+                    }}
+                />
+            ))}
+        </div>
     );
 } 

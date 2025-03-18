@@ -1,0 +1,55 @@
+.switch-container {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    padding: 2px;
+    background-color: var(--color-background-hover);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &[data-state="checked"] {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+
+        .switch-thumb {
+            transform: translateX(calc(100% + 2px));
+        }
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.switch-thumb {
+    position: absolute;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    transition: transform 0.2s ease;
+    transform: translateX(0);
+}
+
+.switch-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
