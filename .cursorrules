@@ -1,0 +1,106 @@
+# 🖋️ "Letters to Al" — Code & Development Guidelines
+
+# The "Letters to Al" project is not primarily a technological showcase, but a timeless, 
+# human-centered, expressive space. Our code, architecture, and dependency choices must 
+# always reflect and resonate with this humanistic philosophy.
+
+rules:
+  # 🌿 Simplicity over Complexity
+  - name: "Prioritize simplicity"
+    description: "Favor clear, expressive, and maintainable code."
+    examples:
+      - "Keep components small, focused, modular, and easy-to-understand at a glance."
+      - "Avoid overly complex abstractions—simplicity fosters longevity."
+      - "Ask yourself: 'Will future maintainers intuitively understand and care for this code?'"
+
+  # 📚 Consistency & Readability
+  - name: "Maintain consistent structure"
+    description: "Adhere strictly to the provided folder structure."
+    examples:
+      - "Name functions, variables, and components intuitively & poetically when possible (without sacrificing clarity)."
+      - "Use standard ESLint + Prettier configurations across frontend/backend."
+      - "Always document public APIs briefly but clearly using comments or Docstrings."
+
+  # 🎨 Styling & Tailwind CSS
+  - name: "Follow styling guidelines"
+    description: "Centralize all styling in our global styles/globals.css file wherever possible."
+    examples:
+      - "Avoid inline styles unless necessary for dynamic interactions or animations."
+      - "Stick to the defined aesthetic palette to maintain visual coherence and emotional resonance."
+      - "Leverage clear Tailwind conventions (@apply) over individual class-manipulations."
+
+  # 🖌️ Visual & Aesthetic Integrity
+  - name: "Maintain visual subtlety"
+    description: "Prioritize subtlety: animations, interactions, and visual effects should gently serve emotional resonance, never overwhelm or distract."
+    examples:
+      - "Limit dependencies—use pure CSS animations and lightweight libraries (e.g., Framer Motion, Three.js) judiciously."
+      - "Ask yourself: 'Does this visual decision serve the poetic and timeless quality we strive for?'"
+
+  # 🚧 Restriction on External Dependencies
+  - name: "Limit dependencies"
+    description: "Only use dependencies explicitly chosen. All additions must be clearly justified."
+    approved_dependencies:
+      frontend: ["React", "Next.js", "TypeScript", "Tailwind CSS", "Three.js", "Framer Motion", "Lucide icons"]
+      backend: ["Node.js", "Express.js", "TypeScript"]
+      database: ["Supabase ecosystem"]
+    forbidden:
+      - "Large UI libraries (Material UI, Chakra, etc.)"
+      - "Analytics & tracking dependencies"
+
+  # 🔗 Data Handling & API Guidelines
+  - name: "Follow API best practices"
+    description: "Keep APIs RESTful, minimal, poetic (use semantics carefully)."
+    examples:
+      - "Handle minimal metadata. Do not store unnecessary user data."
+      - "Embeddings & clustering should be computed asynchronously on the backend—no heavy computation in frontend."
+      - "API responses are small and performantly designed to help the frontend breathe, especially in the 3D visualization."
+
+  # 💫 3D Visualization & Performance
+  - name: "Optimize visualization"
+    description: "Prioritize performance, accessibility, and emotional experience in 3D visualization."
+    examples:
+      - "Default to optimized rendering practices (InstancedMesh, LOD techniques, etc.)."
+      - "Ensure graceful degradation: Provide 2D/CSS fallback for non-supported clients."
+      - "Continuously test visualization performance across multiple common devices."
+
+  # ✨ Interaction Philosophy & UX Flow
+  - name: "Create gentle interactions"
+    description: "Every interaction should feel smooth, inviting reflection."
+    examples:
+      - "Prioritize smooth, poetic transitions instead of abrupt UI changes."
+      - "No unnecessary user barriers—allow anonymous submissions without friction."
+      - "Keep authentication optional and unobtrusive when integrated."
+
+  # 🌌 Use of AI & Emotional Clustering
+  - name: "Use AI appropriately"
+    description: "AI use must strictly serve the project's emotional storytelling purpose."
+    examples:
+      - "Embeddings created asynchronously on submission or periodic batches; keep client-side tech lightweight."
+      - "AI outputs (clusters, color mappings) should feel organic and intuitive—not forced or complex."
+
+  # 🔒 Privacy & Ethical Standards
+  - name: "Respect privacy"
+    description: "Store minimal user metadata. Default contributions as anonymous."
+    examples:
+      - "Never integrate data tracking, user analytics, or intrusive marketing tools."
+      - "Clearly communicate our minimalistic privacy stance with users through approachable language."
+
+  # 🌱 Evolvability, Maintainability, Longevity
+  - name: "Build for maintainability"
+    description: "Build anticipating incremental changes, improvements, and future maintainers."
+    examples:
+      - "Regularly revisit these guidelines to ensure continued adherence."
+      - "Focus on readability, clarity, modularity, and comprehensive code reviews."
+
+  # 🕰️ Timelessness & Longevity
+  - name: "Choose stable technologies"
+    description: "Choose stable, widely-supported technologies to maximize longevity."
+    examples:
+      - "Limit reliance on rapidly-evolving experimental technologies or APIs without stable support."
+      - "Regularly monitor & update dependencies, ensuring stability and security long into the future."
+
+reflection_questions:
+  - "Is this simple?"
+  - "Is this maintainable?"
+  - "Does this serve the poetic, emotional, and timeless experience we're committed to?"
+  - "Does this choice respect our user's time, privacy, and emotional space?"
