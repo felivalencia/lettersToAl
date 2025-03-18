@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { ArrowLeft, RefreshCw, Home, Pen, User } from 'lucide-react';
+import {
+    ArrowLeft, RefreshCw, Home, Pen, User,
+    ZoomIn, ZoomOut, RotateCcw, Info
+} from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
+import { ConstellationCanvas, ConstellationControlsRef } from '@/components/constellation-canvas';
 
 export default function ConstellationPage() {
     const [loading, setLoading] = useState(true);
@@ -21,13 +25,20 @@ export default function ConstellationPage() {
         content: string;
         username: string;
     }>>([]);
+    const [showInfo, setShowInfo] = useState(false);
     const { user } = useAuth();
+    const controlsRef = useRef<ConstellationControlsRef>(null);
 
     useEffect(() => {
         // Fetch all letters and create the constellation
         const fetchLetters = async () => {
             try {
                 const allLetters = await api.letters.getAll();
+
+                if (allLetters.length === 0) {
+                    setLoading(false);
+                    return;
+                }
 
                 // Generate random positions and colors for the letters
                 const starLetters = allLetters.map(letter => ({
@@ -64,6 +75,22 @@ export default function ConstellationPage() {
         return colors[Math.floor(Math.random() * colors.length)];
     };
 
+    const handleZoomIn = () => {
+        controlsRef.current?.zoomIn();
+    };
+
+    const handleZoomOut = () => {
+        controlsRef.current?.zoomOut();
+    };
+
+    const handleReset = () => {
+        controlsRef.current?.resetCamera();
+    };
+
+    const toggleInfo = () => {
+        setShowInfo(!showInfo);
+    };
+
     return (
         <div className="constellation-fullscreen">
             <div className="constellation-overlay">
@@ -92,12 +119,58 @@ export default function ConstellationPage() {
 
                     <h1 className="constellation-title">Stellar Constellation</h1>
 
-                    <ThemeToggle />
+                    <div className="constellation-actions">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="nav-button"
+                            title="Information"
+                            onClick={toggleInfo}
+                        >
+                            <Info size={20} />
+                        </Button>
+                        <ThemeToggle />
+                    </div>
                 </div>
 
-                <div className="constellation-info">
-                    <p>Each star represents a letter. Click on any star to read its contents.</p>
-                </div>
+                {showInfo && (
+                    <div className="constellation-info">
+                        <p>Each star represents a letter. Click on any star to read its contents.</p>
+                        <p>Use the controls below to navigate the constellation.</p>
+                    </div>
+                )}
+
+                {!loading && letters.length > 0 && (
+                    <div className="constellation-controls">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="control-button"
+                            title="Zoom in"
+                            onClick={handleZoomIn}
+                        >
+                            <ZoomIn size={18} />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="control-button"
+                            title="Zoom out"
+                            onClick={handleZoomOut}
+                        >
+                            <ZoomOut size={18} />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="control-button"
+                            title="Reset view"
+                            onClick={handleReset}
+                        >
+                            <RotateCcw size={18} />
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {loading ? (
@@ -105,28 +178,21 @@ export default function ConstellationPage() {
                     <LoadingSpinner size="large" />
                     <p className="loading-text">Generating constellation...</p>
                 </div>
-            ) : (
-                <div className="constellation-canvas">
-                    {/* This will be replaced with a Three.js canvas eventually */}
-                    <div className="fallback-stars">
-                        {letters.map((star) => (
-                            <Link href={`/letters/${star.id}`} key={star.id}>
-                                <div
-                                    className="constellation-star"
-                                    style={{
-                                        left: `${(star.x + 1) * 50}%`,
-                                        top: `${(star.y + 1) * 50}%`,
-                                        width: `${star.size}px`,
-                                        height: `${star.size}px`,
-                                        backgroundColor: star.color,
-                                        zIndex: Math.floor((star.z + 1) * 50)
-                                    }}
-                                    title={`Letter by ${star.username}`}
-                                />
-                            </Link>
-                        ))}
+            ) : letters.length === 0 ? (
+                <div className="empty-constellation">
+                    <div className="empty-message">
+                        <h2>No letters found</h2>
+                        <p>Be the first to write a letter and start the constellation.</p>
+                        <Link href="/writing">
+                            <Button className="write-button">
+                                <Pen size={16} className="mr-2" />
+                                Write a Letter
+                            </Button>
+                        </Link>
                     </div>
                 </div>
+            ) : (
+                <ConstellationCanvas letters={letters} controlsRef={controlsRef} />
             )}
         </div>
     );
