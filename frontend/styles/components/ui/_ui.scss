@@ -1,0 +1,169 @@
+@import '../../base/variables';
+
+// Button styles
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all $transition-standard;
+    cursor: pointer;
+    text-align: center;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    // Variants
+    &.button-primary {
+        background-color: $color-nebula-purple;
+        color: $color-starlight;
+        border: none;
+
+        &:hover:not(:disabled) {
+            background-color: lighten($color-nebula-purple, 10%);
+        }
+    }
+
+    &.button-secondary {
+        background-color: $color-nebula-teal;
+        color: $color-starlight;
+        border: none;
+
+        &:hover:not(:disabled) {
+            background-color: lighten($color-nebula-teal, 10%);
+        }
+    }
+
+    &.button-outline {
+        background: transparent;
+        color: $color-starlight;
+        border: 1px solid rgba($color-starlight, 0.2);
+
+        &:hover:not(:disabled) {
+            border-color: $color-nebula-purple;
+            background-color: rgba($color-nebula-purple, 0.1);
+        }
+    }
+
+    &.button-ghost {
+        background: transparent;
+        color: $color-starlight;
+        border: none;
+
+        &:hover:not(:disabled) {
+            background-color: rgba($color-starlight, 0.1);
+        }
+    }
+
+    // Sizes
+    &.button-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    &.button-md {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+
+    &.button-lg {
+        padding: 0.625rem 1.25rem;
+        font-size: 1.125rem;
+    }
+}
+
+// Card styles
+.card {
+    background-color: rgba($color-cosmic-dark, 0.8);
+    border-radius: 0.5rem;
+    border: 1px solid rgba($color-nebula-purple, 0.2);
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+
+    .card-header {
+        padding: $spacing-lg;
+        border-bottom: 1px solid rgba($color-nebula-purple, 0.1);
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        margin-bottom: $spacing-xs;
+    }
+
+    .card-description {
+        color: rgba($color-starlight, 0.7);
+        font-size: 0.875rem;
+    }
+
+    .card-content {
+        padding: $spacing-lg;
+    }
+
+    .card-footer {
+        padding: $spacing-lg;
+        border-top: 1px solid rgba($color-nebula-purple, 0.1);
+    }
+}
+
+// Input styles
+.input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    background-color: rgba($color-cosmic-dark, 0.5);
+    border: 1px solid rgba($color-nebula-purple, 0.2);
+    color: $color-starlight;
+    border-radius: 0.375rem;
+    transition: border-color $transition-standard, box-shadow $transition-standard;
+
+    &:focus {
+        outline: none;
+        border-color: $color-nebula-purple;
+        box-shadow: 0 0 0 2px rgba($color-nebula-purple, 0.3);
+    }
+
+    &.input-error {
+        border-color: $color-error;
+
+        &:focus {
+            box-shadow: 0 0 0 2px rgba($color-error, 0.3);
+        }
+    }
+}
+
+// Label styles
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: $spacing-xs;
+}
+
+// Theme toggle
+.theme-toggle {
+    background: transparent;
+    border: none;
+    color: $color-starlight;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color $transition-standard;
+
+    &:hover {
+        background-color: rgba($color-starlight, 0.1);
+    }
+
+    .theme-icon {
+        width: 20px;
+        height: 20px;
+    }
+}

@@ -1,3 +1,17 @@
+/**
+ * Supabase API Client
+ * 
+ * @deprecated This file is now deprecated in favor of unified-api.ts.
+ * Direct Supabase access is being replaced with consistent REST API calls.
+ * 
+ * Migration guide:
+ * - import { letterApi } from '@/lib/apiClient';    → import { unifiedApi } from '@/lib/unified-api';
+ * - letterApi.submitLetter(content, isAnonymous)    → unifiedApi.letters.create({ content, isAnonymous })
+ * - letterApi.getLetter(id)                         → unifiedApi.letters.getById(id)
+ * 
+ * See unified-api.ts for the full API reference.
+ */
+
 import { createClient } from '@supabase/supabase-js';
 
 // These will need to be replaced with actual values from your Supabase project

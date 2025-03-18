@@ -1,0 +1,94 @@
+@import '../../base/variables';
+
+// Auth container
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: $spacing-lg;
+    position: relative;
+
+    .card {
+        width: 100%;
+        max-width: 420px;
+        z-index: 1;
+    }
+
+    .theme-toggle-container {
+        position: absolute;
+        top: $spacing-lg;
+        right: $spacing-lg;
+        z-index: 5;
+    }
+
+    .back-button-container {
+        position: absolute;
+        top: $spacing-lg;
+        left: $spacing-lg;
+        z-index: 5;
+    }
+
+    .auth-form-content {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-md;
+    }
+
+    .form-group {
+        margin-bottom: $spacing-md;
+    }
+
+    .error-message {
+        color: $color-error;
+        font-size: 0.875rem;
+        margin-top: $spacing-xs;
+    }
+
+    .auth-form-footer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: $spacing-md;
+    }
+
+    .auth-submit-button {
+        width: 100%;
+    }
+
+    .auth-alt-action {
+        font-size: 0.875rem;
+        color: rgba($color-starlight, 0.7);
+
+        .auth-link {
+            color: $color-nebula-teal;
+            text-decoration: none;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+
+    .button-content {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+    }
+
+    .loading-button-content {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba($color-starlight, 0.2);
+            border-top-color: $color-starlight;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    }
+}

@@ -1,34 +1,42 @@
-// First, load environment variables
+// Load environment variables first
 import { loadEnvironment } from './startup';
 const envLoaded = loadEnvironment();
 if (!envLoaded) {
     console.warn('Starting with missing or invalid environment variables. Some functionality may not work.');
 }
 
-// Then import everything else
+// Core Node.js modules
+import path from 'path';
+
+// External dependencies
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import cookieParser from 'cookie-parser';
+
+// Local routes
 import authRoutes from './routes/authRoutes';
 import letterRoutes from './routes/letterRoutes';
+import { errorHandler } from './utils/errorHandler';
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// CORS Configuration
+const allowedOrigins = [process.env.FRONTEND_URL || 'http://localhost:3000'];
+
+// Primary CORS middleware
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
 
-// Additional headers for better CORS handling
+// Additional CORS headers for browsers that need it
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && (origin === process.env.FRONTEND_URL || origin === 'http://localhost:3000')) {
+    if (origin && allowedOrigins.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin);
     }
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -43,6 +51,7 @@ app.use((req, res, next) => {
     next();
 });
 
+// Standard middleware
 app.use(express.json());
 app.use(cookieParser());
 
@@ -73,14 +82,8 @@ app.get('/api/debug', (req, res) => {
     });
 });
 
-// Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('Error:', err);
-    res.status(500).json({
-        error: 'Something went wrong',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-    });
-});
+// Error handling middleware - using the centralized error handler
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {

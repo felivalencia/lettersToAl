@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { createLetter } from '../services/letterService';
+import { createClient } from '@supabase/supabase-js';
 
 // Load environment variables
 const envPath = path.resolve(__dirname, '../../.env');
@@ -11,6 +12,18 @@ if (fs.existsSync(envPath)) {
 } else {
     console.warn('No .env file found, using default environment');
     dotenv.config();
+}
+
+// Function to get Supabase client for direct database operations
+function getSupabaseClient() {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Missing Supabase credentials. Check your .env file.');
+    }
+
+    return createClient(supabaseUrl, supabaseKey);
 }
 
 // The 50 example letters
@@ -243,17 +256,45 @@ const exampleLetters = [
 ];
 
 /**
- * Upload all example letters to the database
+ * Delete all existing letters from the database
+ */
+async function clearAllLetters() {
+    console.log('Clearing all existing letters from the database...');
+
+    try {
+        const supabase = getSupabaseClient();
+        const { error, count } = await supabase
+            .from('letters')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // A dummy condition to delete all
+
+        if (error) {
+            throw new Error(`Failed to clear letters: ${error.message}`);
+        }
+
+        console.log(`Successfully cleared all letters from the database`);
+    } catch (error) {
+        console.error('Error clearing letters:', error);
+        throw error;
+    }
+}
+
+/**
+ * Upload all example letters to the database with proper embeddings
  */
 async function uploadExampleLetters() {
     console.log('Starting to upload example letters...');
 
+    // Clear existing letters first
+    await clearAllLetters();
+
+    // Then upload new letters with embeddings
     for (let i = 0; i < exampleLetters.length; i++) {
         const content = exampleLetters[i];
         try {
             console.log(`Uploading letter ${i + 1}/${exampleLetters.length}...`);
 
-            // Create the letter (anonymous)
+            // Create the letter (anonymous) - the letterService will handle embedding generation
             const letter = await createLetter({
                 content,
                 isAnonymous: true
@@ -261,6 +302,7 @@ async function uploadExampleLetters() {
 
             console.log(`✓ Letter ${i + 1} uploaded with ID: ${letter.id}`);
             console.log(`  Emotion: ${letter.emotion}, Color: ${letter.color}`);
+            console.log(`  Embedding: ${letter.embedding ? 'Generated' : 'Not generated'}`);
 
             // Add a small delay to prevent overwhelming the API
             await new Promise(resolve => setTimeout(resolve, 1000));

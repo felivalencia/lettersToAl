@@ -1,3 +1,17 @@
+/**
+ * API Client for Letters to Al application
+ * 
+ * @deprecated This file is now deprecated in favor of unified-api.ts.
+ * Please use the unified API client for all new code and gradually migrate existing code.
+ * 
+ * Migration guide:
+ * - import { api } from '@/lib/api';                → import { unifiedApi } from '@/lib/unified-api';
+ * - api.auth.register(data)                        → unifiedApi.auth.register(data)
+ * - api.letters.create(data)                       → unifiedApi.letters.create(data)
+ * 
+ * The interfaces are identical but the implementation is cleaner and more maintainable.
+ */
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 // User types

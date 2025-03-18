@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
-import { ConstellationCanvas, ConstellationControlsRef } from '@/components/constellation-canvas';
+import { unifiedApi } from '@/lib/unified-api';
+import { ConstellationCanvas, ConstellationControlsRef } from '@/components/visualization/ConstellationCanvas';
 
 const VALID_EMOTIONS = [
     'happy',
@@ -66,6 +67,7 @@ export default function ConstellationPage() {
     const [showFilters, setShowFilters] = useState(false);
     const [allLetters, setAllLetters] = useState<any[]>([]);
     const [filterByEmotion, setFilterByEmotion] = useState<string | null>(null);
+    const [similarityData, setSimilarityData] = useState<Record<string, Array<{ id: string, similarity: number }>>>({});
 
     useEffect(() => {
         // Fetch all letters and create the constellation
@@ -83,6 +85,9 @@ export default function ConstellationPage() {
                 // Store all letters
                 setAllLetters(fetchedLetters);
 
+                // Generate similarity data for clustering
+                await generateSimilarityData(fetchedLetters);
+
                 // Apply filters and transform letters to stars
                 applyFiltersAndTransform(fetchedLetters);
             } catch (error) {
@@ -93,6 +98,33 @@ export default function ConstellationPage() {
 
         fetchLetters();
     }, []);
+
+    // Generate similarity data for clustering
+    const generateSimilarityData = async (letters: any[]) => {
+        const similarityMap: Record<string, Array<{ id: string, similarity: number }>> = {};
+
+        try {
+            // Use a subset of letters as anchors to build similarity network
+            // For larger datasets, you might want to limit this to a reasonable number
+            const anchors = letters.slice(0, Math.min(letters.length, 10));
+
+            // For each anchor letter, find similar letters
+            for (const letter of anchors) {
+                const similarLetters = await unifiedApi.letters.findSimilar(letter.id, 10, 0.01);
+                similarityMap[letter.id] = similarLetters.map(l => ({
+                    id: l.id,
+                    similarity: l.similarity
+                }));
+                console.log(`Found ${similarLetters.length} letters similar to ${letter.id}`);
+            }
+
+            setSimilarityData(similarityMap);
+            return similarityMap;
+        } catch (error) {
+            console.error('Error generating similarity data:', error);
+            return {};
+        }
+    };
 
     // Generate a random color from our nebula palette
     const getRandomColor = () => {
@@ -122,7 +154,7 @@ export default function ConstellationPage() {
         setShowInfo(!showInfo);
     };
 
-    // Add a new function to apply filters and transform letters
+    // Update applyFiltersAndTransform to use similarity data for positioning
     const applyFiltersAndTransform = (lettersToFilter: any[]) => {
         // Apply both user and emotion filters
         let filteredLetters = lettersToFilter;
@@ -142,12 +174,16 @@ export default function ConstellationPage() {
             );
         }
 
+        // Calculate positions based on similarity
+        const positions = calculateClusteredPositions(filteredLetters);
+
         // Generate positions and transform to star format
-        const starLetters = filteredLetters.map(letter => ({
+        const starLetters = filteredLetters.map((letter, index) => ({
             id: letter.id,
-            x: Math.random() * 2 - 1, // -1 to 1
-            y: Math.random() * 2 - 1, // -1 to 1
-            z: Math.random() * 2 - 1, // -1 to 1
+            // Use calculated positions from similarity data if available, otherwise use random
+            x: positions[letter.id]?.x || (Math.random() * 2 - 1),
+            y: positions[letter.id]?.y || (Math.random() * 2 - 1),
+            z: positions[letter.id]?.z || (Math.random() * 2 - 1),
             size: Math.random() * 2 + 0.5, // 0.5 to 2.5
             color: letter.color || EMOTION_COLORS[letter.emotion] || EMOTION_COLORS.default,
             content: letter.content,
@@ -157,6 +193,68 @@ export default function ConstellationPage() {
 
         setLetters(starLetters);
         setLoading(false);
+    };
+
+    // Function to calculate clustered positions based on similarity
+    const calculateClusteredPositions = (letters: any[]) => {
+        const positions: Record<string, { x: number, y: number, z: number }> = {};
+
+        // If we don't have similarity data, return empty positions
+        if (Object.keys(similarityData).length === 0) {
+            return positions;
+        }
+
+        // First, place anchor letters (ones we have similarity data for)
+        Object.keys(similarityData).forEach((anchorId, index) => {
+            // Place anchor letters in a circle at roughly the same height
+            const angle = (2 * Math.PI * index) / Object.keys(similarityData).length;
+            const radius = 0.8; // Distance from center
+
+            positions[anchorId] = {
+                x: radius * Math.cos(angle),
+                y: 0.2, // Slight elevation
+                z: radius * Math.sin(angle)
+            };
+        });
+
+        // Then, for each letter, find its position based on similarity to anchors
+        letters.forEach(letter => {
+            // Skip if we already positioned this letter as an anchor
+            if (positions[letter.id]) return;
+
+            let weightedX = 0;
+            let weightedY = 0;
+            let weightedZ = 0;
+            let totalWeight = 0;
+
+            // Check similarity to each anchor
+            Object.entries(similarityData).forEach(([anchorId, similarLetters]) => {
+                // Find this letter in the anchor's similar letters
+                const similarityEntry = similarLetters.find(l => l.id === letter.id);
+
+                if (similarityEntry) {
+                    const anchorPos = positions[anchorId];
+                    const weight = similarityEntry.similarity;
+
+                    // Apply weighted position based on similarity
+                    weightedX += anchorPos.x * weight;
+                    weightedY += anchorPos.y * weight;
+                    weightedZ += anchorPos.z * weight;
+                    totalWeight += weight;
+                }
+            });
+
+            // If we found similarities, use weighted average position
+            if (totalWeight > 0) {
+                positions[letter.id] = {
+                    x: weightedX / totalWeight + (Math.random() * 0.2 - 0.1), // Add small random offset
+                    y: weightedY / totalWeight + (Math.random() * 0.2 - 0.1),
+                    z: weightedZ / totalWeight + (Math.random() * 0.2 - 0.1)
+                };
+            }
+        });
+
+        return positions;
     };
 
     // Add a function to handle user filter selection
@@ -387,25 +485,26 @@ export default function ConstellationPage() {
             </div>
 
             {loading ? (
-                <div className="loading-container">
-                    <LoadingSpinner size="large" />
-                    <p className="loading-text">Generating constellation...</p>
+                <div className="flex items-center justify-center h-full">
+                    <LoadingSpinner />
                 </div>
             ) : letters.length === 0 ? (
                 <div className="empty-constellation">
                     <div className="empty-message">
-                        <h2>No letters found</h2>
-                        <p>Be the first to write a letter and start the constellation.</p>
+                        <p>No letters found in the constellation.</p>
                         <Link href="/writing">
-                            <Button className="write-button">
-                                <Pen size={16} className="mr-2" />
-                                Write a Letter
+                            <Button className="empty-action">
+                                Write the first letter
                             </Button>
                         </Link>
                     </div>
                 </div>
             ) : (
-                <ConstellationCanvas letters={letters} controlsRef={controlsRef} />
+                <ConstellationCanvas
+                    letters={letters}
+                    controlsRef={controlsRef}
+                    similarityData={similarityData}
+                />
             )}
         </div>
     );

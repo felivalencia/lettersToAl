@@ -4,6 +4,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
+// Navigation links defined in one place to avoid duplication
+const NAV_LINKS = [
+    { href: '/', label: 'Home' },
+    { href: '/writing', label: 'Write' },
+    { href: '/constellation', label: 'Constellation' },
+    { href: '/about', label: 'About' }
+];
+
 export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -28,30 +36,15 @@ export default function Header() {
 
                 {/* Desktop navigation */}
                 <nav className="hidden md:flex items-center space-x-6">
-                    <Link
-                        href="/"
-                        className="text-starlight hover:text-nebula-teal transition-colors"
-                    >
-                        Home
-                    </Link>
-                    <Link
-                        href="/writing"
-                        className="text-starlight hover:text-nebula-teal transition-colors"
-                    >
-                        Write
-                    </Link>
-                    <Link
-                        href="/constellation"
-                        className="text-starlight hover:text-nebula-teal transition-colors"
-                    >
-                        Constellation
-                    </Link>
-                    <Link
-                        href="/about"
-                        className="text-starlight hover:text-nebula-teal transition-colors"
-                    >
-                        About
-                    </Link>
+                    {NAV_LINKS.map(link => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="text-starlight hover:text-nebula-teal transition-colors"
+                        >
+                            {link.label}
+                        </Link>
+                    ))}
                 </nav>
             </div>
 
@@ -59,34 +52,16 @@ export default function Header() {
             {isMenuOpen && (
                 <div className="md:hidden absolute top-full left-0 right-0 bg-cosmic-dark bg-opacity-95 backdrop-blur-md border-t border-nebula-purple border-opacity-30 py-4">
                     <nav className="flex flex-col space-y-4 px-6">
-                        <Link
-                            href="/"
-                            className="text-starlight py-2"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Home
-                        </Link>
-                        <Link
-                            href="/writing"
-                            className="text-starlight py-2"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Write
-                        </Link>
-                        <Link
-                            href="/constellation"
-                            className="text-starlight py-2"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            Constellation
-                        </Link>
-                        <Link
-                            href="/about"
-                            className="text-starlight py-2"
-                            onClick={() => setIsMenuOpen(false)}
-                        >
-                            About
-                        </Link>
+                        {NAV_LINKS.map(link => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className="text-starlight py-2"
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
                     </nav>
                 </div>
             )}

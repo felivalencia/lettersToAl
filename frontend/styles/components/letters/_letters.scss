@@ -1,0 +1,177 @@
+@import '../../base/variables';
+
+// Letter writing container
+.writing-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+
+    .writing-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: $spacing-md $spacing-lg;
+        background-color: rgba($color-cosmic-dark, 0.8);
+        backdrop-filter: blur(5px);
+        z-index: 10;
+
+        .writing-title {
+            font-family: $font-serif;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+    }
+
+    .writing-area {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        padding: $spacing-lg;
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+
+        textarea {
+            flex-grow: 1;
+            min-height: 200px;
+            background-color: rgba($color-cosmic-dark, 0.5);
+            border: 1px solid rgba($color-nebula-purple, 0.2);
+            color: $color-starlight;
+            border-radius: 0.5rem;
+            padding: $spacing-md;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: none;
+            transition: border-color $transition-standard;
+
+            &:focus {
+                outline: none;
+                border-color: $color-nebula-purple;
+            }
+        }
+    }
+
+    .writing-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: $spacing-md;
+
+        .control-right {
+            display: flex;
+            gap: $spacing-sm;
+        }
+    }
+
+    .anonymous-toggle {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        font-size: 0.875rem;
+        color: rgba($color-starlight, 0.8);
+    }
+}
+
+// Letter detail page
+.letter-detail-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-lg;
+    position: relative;
+
+    .letter-card {
+        max-width: 800px;
+        width: 100%;
+        z-index: 1;
+    }
+
+    .letter-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: rgba($color-starlight, 0.7);
+        font-size: 0.875rem;
+
+        .letter-author,
+        .letter-date {
+            display: flex;
+            align-items: center;
+            gap: $spacing-xs;
+        }
+
+        .meta-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+    }
+
+    .letter-content {
+        font-size: 1.125rem;
+        line-height: 1.7;
+        white-space: pre-line;
+
+        p {
+            margin-bottom: $spacing-md;
+        }
+    }
+
+    .letter-actions {
+        display: flex;
+        gap: $spacing-md;
+        margin-top: $spacing-md;
+
+        @media (max-width: $breakpoint-md) {
+            flex-direction: column;
+            width: 100%;
+
+            button {
+                width: 100%;
+            }
+        }
+    }
+}
+
+// Drawing canvas
+.drawing-canvas-container {
+    border: 1px solid rgba($color-nebula-purple, 0.2);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: $spacing-lg;
+
+    .drawing-toolbar {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        padding: $spacing-sm;
+        background-color: rgba($color-cosmic-dark, 0.8);
+        border-bottom: 1px solid rgba($color-nebula-purple, 0.2);
+
+        .color-picker {
+            display: flex;
+            gap: $spacing-xs;
+            margin-left: auto;
+
+            .color-option {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                cursor: pointer;
+                border: 2px solid transparent;
+
+                &.active {
+                    border-color: $color-starlight;
+                }
+            }
+        }
+    }
+
+    canvas {
+        display: block;
+        background-color: rgba($color-cosmic-dark, 0.4);
+        touch-action: none;
+    }
+}

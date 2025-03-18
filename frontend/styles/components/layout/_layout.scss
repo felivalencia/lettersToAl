@@ -1,0 +1,124 @@
+@import '../../base/variables';
+
+// Header styling
+header {
+    width: 100%;
+    z-index: 10;
+
+    nav {
+        a {
+            position: relative;
+
+            &::after {
+                content: '';
+                position: absolute;
+                bottom: -4px;
+                left: 0;
+                width: 0;
+                height: 2px;
+                background-color: $color-nebula-teal;
+                transition: width $transition-standard;
+            }
+
+            &:hover::after {
+                width: 100%;
+            }
+        }
+    }
+}
+
+// Footer styling
+footer {
+    padding: $spacing-lg 0;
+    background-color: rgba($color-cosmic-dark, 0.8);
+    border-top: 1px solid rgba($color-nebula-purple, 0.2);
+
+    a {
+        transition: color $transition-standard;
+
+        &:hover {
+            color: $color-nebula-teal;
+        }
+    }
+}
+
+// Common page layout
+.page-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    .page-content {
+        flex-grow: 1;
+        padding: $spacing-lg;
+
+        @media (min-width: $breakpoint-md) {
+            padding: $spacing-xl;
+        }
+    }
+}
+
+// Hero layout
+.home-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: $spacing-lg;
+    position: relative;
+    overflow-x: hidden;
+
+    .hero-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        text-align: center;
+        z-index: 1;
+    }
+
+    .hero-title {
+        font-family: $font-serif;
+        font-size: 3rem;
+        margin-bottom: $spacing-md;
+        background: linear-gradient(to right, $color-nebula-purple, $color-nebula-teal);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+
+        @media (min-width: $breakpoint-md) {
+            font-size: 4.5rem;
+        }
+    }
+
+    .hero-subtitle {
+        font-size: 1.25rem;
+        margin-bottom: $spacing-lg;
+        color: rgba($color-starlight, 0.9);
+
+        @media (min-width: $breakpoint-md) {
+            font-size: 1.5rem;
+        }
+    }
+
+    .hero-cards {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: $spacing-lg;
+        margin-top: $spacing-xl;
+
+        @media (min-width: $breakpoint-md) {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @media (min-width: $breakpoint-lg) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .hero-card {
+        background-color: rgba($color-cosmic-dark, 0.7);
+        border-radius: 0.5rem;
+        border: 1px solid rgba($color-nebula-purple, 0.2);
+        padding: $spacing-lg;
+        backdrop-filter: blur(10px);
+        text-align: left;
+    }
+}

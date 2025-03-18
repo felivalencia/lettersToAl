@@ -1,15 +1,8 @@
-/**
- * Writing Area Component
- * 
- * TODO: Consider moving this file to a dedicated "writing" or "input" directory
- * within the components folder to better organize related functionality.
- */
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Send, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface WritingAreaProps {
     onSubmit: (content: string, isAnonymous: boolean) => Promise<void>;

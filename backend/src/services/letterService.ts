@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { analyzeEmotion } from './emotionService';
+import { generateEmbedding, calculateSimilarity } from './embeddingService';
 
 // Define interfaces for letter data
 interface Letter {
@@ -84,19 +85,27 @@ export async function createLetter(letterData: CreateLetterData): Promise<Letter
             content: letterData.content.substring(0, 20) + (letterData.content.length > 20 ? '...' : '')
         });
 
-        // If emotion or color is not provided, analyze the content
-        if (!letterData.emotion || !letterData.color) {
-            try {
-                const analysis = await analyzeEmotion(letterData.content);
-                console.log('Emotion analysis result:', analysis);
+        // Perform parallel processing of emotion analysis and embedding generation
+        const [emotionPromise, embeddingPromise] = [
+            // Only analyze emotion if not already provided
+            (!letterData.emotion || !letterData.color) ? analyzeEmotion(letterData.content) : Promise.resolve(null),
+            // Generate embedding
+            generateEmbedding(letterData.content)
+        ];
 
-                // Only use analyzed values if not already provided
-                if (!letterData.emotion) letterData.emotion = analysis.emotion;
-                if (!letterData.color) letterData.color = analysis.color;
-            } catch (analysisError) {
-                console.error('Error during emotion analysis:', analysisError);
-                // Continue with default or existing values
-            }
+        // Wait for both processes to complete
+        const [emotionResult, embeddingResult] = await Promise.all([emotionPromise, embeddingPromise]);
+
+        // Only use analyzed values if not already provided
+        if (emotionResult) {
+            console.log('Emotion analysis result:', emotionResult);
+            if (!letterData.emotion) letterData.emotion = emotionResult.emotion;
+            if (!letterData.color) letterData.color = emotionResult.color;
+        }
+
+        // Store the embedding
+        if (embeddingResult && embeddingResult.length > 0) {
+            letterData.embedding = embeddingResult;
         }
 
         // Generate random location if not provided
@@ -104,54 +113,56 @@ export async function createLetter(letterData: CreateLetterData): Promise<Letter
             letterData.location = generateRandomLocation();
         }
 
-        // Prepare letter data, handling potential missing columns
-        const letterRecord: any = {
+        // Prepare letter data for database
+        const dbLetterData = {
             content: letterData.content,
-            is_anonymous: letterData.isAnonymous,
             user_id: letterData.userId,
+            is_anonymous: letterData.isAnonymous,
+            emotional_vector: letterData.embedding, // Store embedding in the emotional_vector column
             emotion: letterData.emotion,
             color: letterData.color,
             location: letterData.location
         };
 
-        // Only add these fields if they're provided
-        if (username) letterRecord.username = username;
-        if (letterData.embedding) letterRecord.embedding = letterData.embedding;
+        console.log('Preparing letter for database:', {
+            ...dbLetterData,
+            content: dbLetterData.content.substring(0, 20) + (dbLetterData.content.length > 20 ? '...' : ''),
+            emotional_vector: dbLetterData.emotional_vector ? `[vector with ${dbLetterData.emotional_vector.length} dimensions]` : null
+        });
 
         // Insert the letter
-        const { data, error } = await supabase
+        const { data: insertedLetter, error: insertError } = await supabase
             .from('letters')
-            .insert([letterRecord])
-            .select();
+            .insert([dbLetterData])
+            .select()
+            .single();
 
-        if (error) {
-            console.error('Error creating letter:', error);
-            console.error('Error details:', JSON.stringify(error, null, 2));
-            throw new Error(`Failed to create letter: ${error.message}`);
+        if (insertError) {
+            console.error('Error inserting letter:', insertError);
+            throw new Error(`Error inserting letter: ${insertError.message}`);
         }
 
-        if (!data || data.length === 0) {
-            throw new Error('Failed to create letter: No data returned');
+        if (!insertedLetter) {
+            throw new Error('Failed to create letter - no data returned from insert');
         }
 
-        // Format the letter to match our interface
-        const letter = data[0];
-        console.log('Successfully created letter with ID:', letter.id);
-
-        return {
-            id: letter.id,
-            content: letter.content,
-            emotion: letter.emotion,
-            color: letter.color,
-            location: letter.location,
-            userId: letter.user_id,
-            username: letter.username || 'Anonymous',
-            isAnonymous: letter.is_anonymous,
-            embedding: letter.embedding,
-            created_at: letter.created_at
+        // Format the letter for return
+        const letter: Letter = {
+            id: insertedLetter.id,
+            content: insertedLetter.content,
+            emotion: insertedLetter.emotion,
+            color: insertedLetter.color,
+            location: insertedLetter.location,
+            userId: insertedLetter.user_id,
+            username: username || undefined,
+            isAnonymous: insertedLetter.is_anonymous,
+            embedding: insertedLetter.emotional_vector,
+            created_at: insertedLetter.created_at
         };
+
+        return letter;
     } catch (error) {
-        console.error('Caught error in createLetter:', error);
+        console.error('Error creating letter:', error);
         throw error;
     }
 }
@@ -191,7 +202,7 @@ export async function getAllLetters(): Promise<Letter[]> {
         userId: letter.user_id,
         username: letter.username || 'Anonymous',
         isAnonymous: letter.is_anonymous,
-        embedding: letter.embedding,
+        embedding: letter.emotional_vector,
         created_at: letter.created_at
     }));
 }
@@ -233,7 +244,7 @@ export async function getLetterById(id: string): Promise<Letter | null> {
         userId: data.user_id,
         username: data.username || 'Anonymous',
         isAnonymous: data.is_anonymous,
-        embedding: data.embedding,
+        embedding: data.emotional_vector,
         created_at: data.created_at
     };
 }
@@ -275,7 +286,7 @@ export async function getLettersByUserId(userId: string): Promise<Letter[]> {
         userId: letter.user_id,
         username: letter.username || 'Anonymous',
         isAnonymous: letter.is_anonymous,
-        embedding: letter.embedding,
+        embedding: letter.emotional_vector,
         created_at: letter.created_at
     }));
 }
@@ -289,4 +300,175 @@ function generateRandomLocation(): string {
     const y = (Math.random() * 2 - 1).toFixed(3);
     const z = (Math.random() * 2 - 1).toFixed(3);
     return `${x},${y},${z}`;
+}
+
+/**
+ * Find letters similar to a given letter or text
+ * @param {string | number[]} query - Letter ID or text content or embedding vector
+ * @param {number} limit - Maximum number of similar letters to return
+ * @param {number} threshold - Minimum similarity threshold (0-1)
+ * @returns {Promise<Array<Letter & { similarity: number }>>} - Similar letters with similarity scores
+ */
+export async function findSimilarLetters(
+    query: string,
+    limit: number = 5,
+    threshold: number = 0.7
+): Promise<Array<Letter & { similarity: number }>> {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+        throw new Error('Supabase client not initialized');
+    }
+
+    try {
+        let targetEmbedding: number[] = [];
+
+        // If query is a string, it could be either a letter ID or text content
+        if (typeof query === 'string') {
+            // Check if it's a UUID (letter ID)
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (uuidRegex.test(query)) {
+                // It's a letter ID, fetch its embedding
+                const { data: letterData, error: letterError } = await supabase
+                    .from('letters')
+                    .select('emotional_vector')
+                    .eq('id', query)
+                    .single();
+
+                if (letterError || !letterData || !letterData.emotional_vector) {
+                    throw new Error(`Error fetching letter embedding: ${letterError?.message || 'No embedding found'}`);
+                }
+
+                targetEmbedding = letterData.emotional_vector;
+            } else {
+                // It's text content, generate a new embedding
+                targetEmbedding = await generateEmbedding(query);
+
+                if (targetEmbedding.length === 0) {
+                    throw new Error('Failed to generate embedding for query text');
+                }
+            }
+        }
+
+        console.log(`Looking for letters similar to embedding with ${targetEmbedding.length} dimensions`);
+
+        // First check if database supports vector operations
+        // If it does, we can do this directly in the database
+        try {
+            // Try using RPC function if it exists
+            const { data: rpcData, error: rpcError } = await supabase
+                .rpc('match_letters', {
+                    query_embedding: targetEmbedding,
+                    match_threshold: threshold,
+                    match_count: limit
+                });
+
+            if (!rpcError && rpcData && rpcData.length > 0) {
+                console.log(`Found ${rpcData.length} matches using RPC function`);
+
+                // Format the results
+                return rpcData.map((item: any) => ({
+                    id: item.id,
+                    content: item.content,
+                    emotion: item.emotion,
+                    color: item.color,
+                    location: item.location,
+                    userId: item.user_id,
+                    isAnonymous: item.is_anonymous,
+                    created_at: item.created_at,
+                    similarity: item.similarity
+                }));
+            }
+        } catch (rpcError) {
+            console.warn('RPC function not available or failed, falling back to client-side similarity:', rpcError);
+            // Continue to fallback method
+        }
+
+        // Fallback: Get all letters with embeddings and compute similarity client-side
+        const { data: letters, error: fetchError } = await supabase
+            .from('letters')
+            .select('*')
+            .not('emotional_vector', 'is', null);
+
+        if (fetchError) {
+            console.error('Error fetching letters with embeddings:', fetchError);
+            throw new Error(`Error fetching letters: ${fetchError.message}`);
+        }
+
+        if (!letters || letters.length === 0) {
+            console.log('No letters found with embeddings');
+            return [];
+        }
+
+        console.log(`Found ${letters.length} letters with embeddings`);
+        console.log(`Sample letter embedding field:`, letters[0].emotional_vector ? 'exists' : 'missing');
+        console.log(`Target embedding dimensions: ${targetEmbedding.length}`);
+
+        // Check if the first letter has an embedding we can use
+        if (letters[0] && letters[0].emotional_vector) {
+            const sampleEmbedding = letters[0].emotional_vector;
+            console.log(`Sample letter embedding dimensions: ${Array.isArray(sampleEmbedding) ? sampleEmbedding.length : 'not an array'}`);
+            console.log(`Sample letter embedding type: ${typeof sampleEmbedding}`);
+            if (typeof sampleEmbedding === 'string') {
+                try {
+                    // Try to parse it if it's a string
+                    const parsed = JSON.parse(sampleEmbedding);
+                    console.log(`Parsed embedding dimensions: ${Array.isArray(parsed) ? parsed.length : 'not an array'}`);
+                } catch (e: any) {
+                    console.log(`Failed to parse embedding string: ${e.message}`);
+                }
+            }
+        }
+
+        // Calculate similarity for each letter
+        const lettersWithSimilarity = letters.map((letter: any) => {
+            let letterEmbedding = letter.emotional_vector;
+
+            // If embedding is a string, try to parse it
+            if (typeof letterEmbedding === 'string') {
+                try {
+                    letterEmbedding = JSON.parse(letterEmbedding);
+                } catch (e: any) {
+                    console.log(`Failed to parse embedding for letter ${letter.id}: ${e.message}`);
+                    return null;
+                }
+            }
+
+            // Skip letters without valid embeddings
+            if (!Array.isArray(letterEmbedding) || letterEmbedding.length === 0) {
+                console.log(`Skipping letter ${letter.id} - invalid embedding`);
+                return null;
+            }
+
+            const similarity = calculateSimilarity(targetEmbedding, letterEmbedding);
+            console.log(`Letter ${letter.id} similarity: ${similarity}`);
+
+            return {
+                id: letter.id,
+                content: letter.content,
+                emotion: letter.emotion,
+                color: letter.color,
+                location: letter.location,
+                userId: letter.user_id,
+                isAnonymous: letter.is_anonymous,
+                embedding: letter.emotional_vector,
+                created_at: letter.created_at,
+                similarity
+            };
+        }).filter(letter => letter !== null);
+
+        // Filter by threshold and sort by similarity
+        const filteredResults = lettersWithSimilarity
+            .filter(letter => letter.similarity >= threshold)
+            .sort((a, b) => b.similarity - a.similarity)
+            .slice(0, limit);
+
+        console.log(`Found ${filteredResults.length} letters above similarity threshold ${threshold}`);
+
+        return filteredResults;
+
+    } catch (error) {
+        console.error('Error finding similar letters:', error);
+        throw error;
+    }
 } 

@@ -1,7 +1,10 @@
+// External dependencies
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
+
+// Internal dependencies
+import { generateToken, verifyToken as verifyJwt, TokenPayload } from './tokenService';
 
 // Define interfaces for user data
 interface User {
@@ -20,8 +23,7 @@ export interface AuthUser {
     accessToken: string;
 }
 
-// JWT secret key - should be in .env in production
-const JWT_SECRET = process.env.JWT_SECRET || 'letters-to-al-secret-key';
+// Bcrypt configuration
 const SALT_ROUNDS = 10;
 
 // Helper function to get Supabase client when needed
@@ -110,11 +112,7 @@ export async function registerUser(username: string, email: string | undefined, 
 
     // Generate JWT token
     const user = newUser[0] as User;
-    const accessToken = jwt.sign(
-        { userId: user.id, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-    );
+    const accessToken = generateToken(user.id, user.username);
 
     return {
         id: user.id,
@@ -163,11 +161,7 @@ export async function loginUser(email: string, password: string): Promise<AuthUs
     }
 
     // Generate JWT token
-    const accessToken = jwt.sign(
-        { userId: user.id, username: user.username },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-    );
+    const accessToken = generateToken(user.id, user.username);
 
     return {
         id: user.id,
@@ -180,37 +174,33 @@ export async function loginUser(email: string, password: string): Promise<AuthUs
 /**
  * Verify JWT token
  * @param {string} token - The JWT token
- * @returns {Promise<User | null>} - The user or null if token is invalid
+ * @returns {Promise<AuthUser | null>} - The user or null if token is invalid
  */
 export async function verifyToken(token: string): Promise<AuthUser | null> {
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string, username: string };
+    const decoded = verifyJwt(token);
 
-        if (!decoded.userId) {
-            return null;
-        }
-
-        const supabase = getSupabaseClient();
-
-        // Find user by ID
-        const { data: users, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', decoded.userId);
-
-        if (error || !users || users.length === 0) {
-            return null;
-        }
-
-        const user = users[0] as User;
-
-        return {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            accessToken: token
-        };
-    } catch (error) {
+    if (!decoded) {
         return null;
     }
+
+    const supabase = getSupabaseClient();
+
+    // Find user by ID
+    const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', decoded.userId);
+
+    if (error || !users || users.length === 0) {
+        return null;
+    }
+
+    const user = users[0] as User;
+
+    return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        accessToken: token
+    };
 } 
