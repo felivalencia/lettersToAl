@@ -6,14 +6,23 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import { Star } from './Star';
 import LetterModal from './LetterModal';
 
+interface StarData {
+    id: string;
+    position: [number, number, number];
+    color: string;
+    size: number;
+    content: string;
+    createdAt: string;
+}
+
 // Temporary mock data until API is connected
-const MOCK_STARS = Array.from({ length: 50 }).map((_, i) => ({
+const MOCK_STARS: StarData[] = Array.from({ length: 50 }).map((_, i) => ({
     id: `star-${i}`,
     position: [
         (Math.random() - 0.5) * 20,
         (Math.random() - 0.5) * 20,
         (Math.random() - 0.5) * 20
-    ],
+    ] as [number, number, number],
     color: ['#6e44ff', '#4285f4', '#36bfb1', '#ff66c4', '#ff9e44'][
         Math.floor(Math.random() * 5)
     ],
@@ -24,8 +33,8 @@ const MOCK_STARS = Array.from({ length: 50 }).map((_, i) => ({
 
 export default function StarMap() {
     const controlsRef = useRef(null);
-    const [stars, setStars] = useState(MOCK_STARS);
-    const [selectedLetter, setSelectedLetter] = useState(null);
+    const [stars, setStars] = useState<StarData[]>(MOCK_STARS);
+    const [selectedLetter, setSelectedLetter] = useState<StarData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -52,7 +61,7 @@ export default function StarMap() {
         // fetchLetters();
     }, []);
 
-    const handleStarClick = (star) => {
+    const handleStarClick = (star: StarData) => {
         setSelectedLetter(star);
     };
 

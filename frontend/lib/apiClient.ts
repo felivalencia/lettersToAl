@@ -24,7 +24,7 @@ export const letterApi = {
                         content,
                         anonymous: isAnonymous,
                         // If not anonymous and the user is logged in, associate with user_id
-                        ...((!isAnonymous && supabase.auth.getUser()) ? {
+                        ...(!isAnonymous ? {
                             author_id: (await supabase.auth.getUser()).data.user?.id
                         } : {})
                     }

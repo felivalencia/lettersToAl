@@ -54,14 +54,21 @@
     justify-content: center;
 
     .not-found-button {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
+        display: inline-block;
+        width: 200px;
+        text-decoration: none;
 
-        .button-icon {
-            width: 1rem;
-            height: 1rem;
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+
+            .button-icon {
+                width: 1rem;
+                height: 1rem;
+            }
         }
     }
 }

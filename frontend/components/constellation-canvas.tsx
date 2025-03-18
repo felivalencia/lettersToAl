@@ -4,6 +4,8 @@ import { Stars, OrbitControls, Billboard, Line } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
 import { Vector3, Object3D, LineBasicMaterial, Color } from 'three';
 import { useRouter } from 'next/navigation';
+import { useMemo } from 'react';
+import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 type StarProps = {
     position: [number, number, number];
@@ -236,9 +238,6 @@ const Scene = ({
     );
 };
 
-// Import useMemo
-import { useMemo } from 'react';
-
 // Export a type definition for the controls API
 export type ConstellationControlsRef = {
     resetCamera: () => void;
@@ -263,7 +262,7 @@ interface ConstellationCanvasProps {
 }
 
 export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanvasProps) {
-    const orbitControlsRef = useRef(null);
+    const orbitControlsRef = useRef<OrbitControlsImpl>(null);
     const [hoveredStar, setHoveredStar] = useState<{
         id: string;
         username: string;
@@ -314,28 +313,38 @@ export function ConstellationCanvas({ letters, controlsRef }: ConstellationCanva
     useImperativeHandle(controlsRef, () => ({
         resetCamera: () => {
             if (orbitControlsRef.current) {
-                orbitControlsRef.current.reset();
+                // Use a type guard to check if reset method exists
+                const controls = orbitControlsRef.current;
+                if (typeof controls.reset === 'function') {
+                    controls.reset();
+                }
             }
         },
         zoomIn: () => {
             if (orbitControlsRef.current) {
                 const controls = orbitControlsRef.current;
-                controls.dollyIn(1.2);
-                controls.update();
+                if (typeof controls.dollyIn === 'function') {
+                    controls.dollyIn(1.2);
+                    controls.update();
+                }
             }
         },
         zoomOut: () => {
             if (orbitControlsRef.current) {
                 const controls = orbitControlsRef.current;
-                controls.dollyOut(1.2);
-                controls.update();
+                if (typeof controls.dollyOut === 'function') {
+                    controls.dollyOut(1.2);
+                    controls.update();
+                }
             }
         },
         rotateTo: (x: number, y: number, z: number) => {
             if (orbitControlsRef.current) {
                 const controls = orbitControlsRef.current;
-                controls.target.set(x, y, z);
-                controls.update();
+                if (controls.target) {
+                    controls.target.set(x, y, z);
+                    controls.update();
+                }
             }
         }
     }), [orbitControlsRef]);

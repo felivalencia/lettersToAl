@@ -20,19 +20,19 @@ export default function NotFound() {
                 </p>
 
                 <div className="not-found-actions">
-                    <Button asChild variant="outline">
-                        <Link href="/" className="not-found-button">
+                    <Link href="/" className="not-found-button">
+                        <Button variant="outline">
                             <Home className="button-icon" />
                             Return Home
-                        </Link>
-                    </Button>
+                        </Button>
+                    </Link>
 
-                    <Button asChild variant="outline">
-                        <Link href="/constellation" className="not-found-button">
+                    <Link href="/constellation" className="not-found-button">
+                        <Button variant="outline">
                             <ArrowLeft className="button-icon" />
                             Explore Constellation
-                        </Link>
-                    </Button>
+                        </Button>
+                    </Link>
                 </div>
             </div>
 
