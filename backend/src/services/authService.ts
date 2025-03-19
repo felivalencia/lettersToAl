@@ -124,22 +124,18 @@ export async function registerUser(username: string, email: string | undefined, 
 
 /**
  * Login a user
- * @param {string} email - The user's email
+ * @param {string} username - The user's username
  * @param {string} password - The user's password
  * @returns {Promise<AuthUser>} - The authenticated user with token
  */
-export async function loginUser(email: string, password: string): Promise<AuthUser> {
+export async function loginUser(username: string, password: string): Promise<AuthUser> {
     const supabase = getSupabaseClient();
 
-    // Convert email to lowercase for case-insensitive comparison
-    const normalizedEmail = email.toLowerCase().trim();
-    console.log(`Attempting login with email: ${normalizedEmail}`);
-
-    // Find user by email
+    // Find user by username
     const { data: users, error: searchError } = await supabase
         .from('users')
         .select('*')
-        .ilike('email', normalizedEmail);
+        .eq('username', username);
 
     if (searchError) {
         console.error('Error finding user:', searchError);
@@ -147,7 +143,7 @@ export async function loginUser(email: string, password: string): Promise<AuthUs
     }
 
     if (!users || users.length === 0) {
-        throw new Error('Invalid email or password');
+        throw new Error('Invalid username or password');
     }
 
     const user = users[0] as User;
@@ -157,7 +153,7 @@ export async function loginUser(email: string, password: string): Promise<AuthUs
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
-        throw new Error('Invalid email or password');
+        throw new Error('Invalid username or password');
     }
 
     // Generate JWT token
@@ -203,4 +199,27 @@ export async function verifyToken(token: string): Promise<AuthUser | null> {
         email: user.email,
         accessToken: token
     };
+}
+
+/**
+ * Search for users by username 
+ * @param {string} searchTerm - The search term to look for in usernames
+ * @returns {Promise<Array<{ id: string, username: string }>>} - Array of matching users
+ */
+export async function searchUsersByUsername(searchTerm: string): Promise<Array<{ id: string, username: string }>> {
+    const supabase = getSupabaseClient();
+
+    // Use ILIKE for case-insensitive pattern matching
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, username')
+        .ilike('username', `%${searchTerm}%`)
+        .limit(10); // Limit results for performance
+
+    if (error) {
+        console.error('Error searching users:', error);
+        throw new Error(`Error searching users: ${error.message}`);
+    }
+
+    return data || [];
 } 

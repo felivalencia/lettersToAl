@@ -128,4 +128,20 @@ router.get('/check', async (req: Request, res: Response) => {
     }
 });
 
+// Search users by username
+router.get('/search', async (req: Request, res: Response) => {
+    try {
+        const searchTerm = req.query.q as string;
+
+        if (!searchTerm || searchTerm.trim().length < 2) {
+            return res.status(400).json({ error: 'Search term must be at least 2 characters' });
+        }
+
+        const users = await authService.searchUsersByUsername(searchTerm.trim());
+        res.json(users);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message || 'Failed to search users' });
+    }
+});
+
 export default router; 

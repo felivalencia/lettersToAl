@@ -110,7 +110,11 @@ class AuthApi extends ApiClient {
     async register(data: RegisterData): Promise<User> {
         const result = await this.request<{ user: User }>('/auth/register', {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+                username: data.username,
+                email: data.email,
+                password: data.password
+            }),
         });
 
         return result.user;
@@ -123,7 +127,7 @@ class AuthApi extends ApiClient {
         const result = await this.request<{ user: User }>('/auth/login', {
             method: 'POST',
             body: JSON.stringify({
-                email: data.username, // Try using username as email
+                username: data.username,
                 password: data.password
             }),
         });
@@ -150,6 +154,14 @@ class AuthApi extends ApiClient {
             // Not authenticated or other error
             return null;
         }
+    }
+
+    /**
+     * Search for users by username
+     * @param searchTerm - The search term to look for in usernames
+     */
+    async searchUsers(searchTerm: string): Promise<Array<{ id: string, username: string }>> {
+        return this.request<Array<{ id: string, username: string }>>(`/auth/search?q=${encodeURIComponent(searchTerm)}`);
     }
 }
 

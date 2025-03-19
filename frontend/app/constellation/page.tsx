@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import {
     ArrowLeft, RefreshCw, Home, Pen, User,
-    ZoomIn, ZoomOut, RotateCcw, Info, Filter, X
+    ZoomIn, ZoomOut, RotateCcw, Info, Filter, X, Search
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
@@ -47,6 +47,28 @@ const EMOTION_COLORS: Record<string, string> = {
     default: '#CCCCCC'    // Light Gray
 };
 
+// Memoized StarBackground component
+const StarBackground = memo(() => (
+    <div className="stars-container">
+        {Array.from({ length: 100 }).map((_, i) => (
+            <div
+                key={i}
+                className="star-bg"
+                style={{
+                    top: `${Math.random() * 100}%`,
+                    left: `${Math.random() * 100}%`,
+                    width: `${Math.max(1, Math.random() * 3)}px`,
+                    height: `${Math.max(1, Math.random() * 3)}px`,
+                    opacity: Math.random() * 0.7 + 0.3,
+                    animationDelay: `${Math.random() * 5}s`,
+                    animationDuration: `${Math.random() * 5 + 3}s`,
+                    pointerEvents: 'none' // Ensure stars themselves don't block interaction
+                }}
+            />
+        ))}
+    </div>
+));
+
 export default function ConstellationPage() {
     const [loading, setLoading] = useState(true);
     const [letters, setLetters] = useState<Array<{
@@ -68,6 +90,11 @@ export default function ConstellationPage() {
     const [allLetters, setAllLetters] = useState<any[]>([]);
     const [filterByEmotion, setFilterByEmotion] = useState<string | null>(null);
     const [similarityData, setSimilarityData] = useState<Record<string, Array<{ id: string, similarity: number }>>>({});
+
+    // Add new state variables for user search
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState<Array<{ id: string, username: string }>>([]);
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         // Fetch all letters and create the constellation
@@ -313,6 +340,35 @@ export default function ConstellationPage() {
         return Array.from(emotions).sort();
     };
 
+    // Add new function to search users
+    const searchUsers = useCallback(async (term: string) => {
+        if (term.trim().length < 2) {
+            setSearchResults([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const results = await unifiedApi.auth.searchUsers(term);
+            setSearchResults(results);
+        } catch (error) {
+            console.error('Error searching users:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    }, []);
+
+    // Add debounce for search term changes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (userSearchTerm.trim().length >= 2) {
+                searchUsers(userSearchTerm);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [userSearchTerm, searchUsers]);
+
     return (
         <div className="constellation-fullscreen" style={{
             position: 'relative',
@@ -321,24 +377,8 @@ export default function ConstellationPage() {
             overflow: 'hidden',
             background: 'black'
         }}>
-            {/* Star background for consistent look with other pages */}
-            <div className="star-background" style={{ zIndex: 1 }}>
-                <div className="stars">
-                    {Array.from({ length: 50 }).map((_, i) => (
-                        <div
-                            key={i}
-                            className="background-star"
-                            style={{
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                width: `${Math.random() * 3 + 1}px`,
-                                height: `${Math.random() * 3 + 1}px`,
-                                animationDelay: `${Math.random() * 5}s`
-                            }}
-                        />
-                    ))}
-                </div>
-            </div>
+            {/* Use the memoized StarBackground component */}
+            <StarBackground />
 
             {/* Canvas container for stars - needs to be first in the DOM for proper stacking */}
             {!loading && letters.length > 0 && (
@@ -349,7 +389,8 @@ export default function ConstellationPage() {
                     width: '100%',
                     height: '100%',
                     zIndex: 1,
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    pointerEvents: 'auto' // Ensure interaction with the writing component
                 }}>
                     <ConstellationCanvas
                         letters={letters}
@@ -498,23 +539,77 @@ export default function ConstellationPage() {
 
                         <div className="filters-section" style={{ marginBottom: '16px' }}>
                             <h4 style={{ marginTop: 0, marginBottom: '8px' }}>By Author</h4>
+
+                            {/* Add search input for users */}
+                            <div className="search-container" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                marginBottom: '12px',
+                                position: 'relative',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                borderRadius: '4px',
+                                padding: '6px 10px'
+                            }}>
+                                <Search size={14} style={{ marginRight: '8px', opacity: 0.7 }} />
+                                <input
+                                    type="text"
+                                    placeholder="Search users..."
+                                    value={userSearchTerm}
+                                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'white',
+                                        width: '100%',
+                                        fontSize: '0.8rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                                {isSearching && (
+                                    <div style={{ position: 'absolute', right: '10px' }}>
+                                        <LoadingSpinner size="small" />
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="filters-content" style={{
                                 display: 'flex',
                                 flexWrap: 'wrap',
                                 gap: '8px'
                             }}>
-                                {getUniqueUsernames().map(username => (
-                                    <Button
-                                        key={username}
-                                        variant={filterByUser === username ? "primary" : "outline"}
-                                        size="sm"
-                                        className="filter-button"
-                                        onClick={() => handleFilterByUser(username)}
-                                    >
-                                        <User size={14} className="mr-1" />
-                                        {username}
-                                    </Button>
-                                ))}
+                                {/* Show search results when search term exists, otherwise show all unique usernames */}
+                                {userSearchTerm.trim().length >= 2
+                                    ? searchResults.map(user => (
+                                        <Button
+                                            key={user.id}
+                                            variant={filterByUser === user.username ? "primary" : "outline"}
+                                            size="sm"
+                                            className="filter-button"
+                                            onClick={() => handleFilterByUser(user.username)}
+                                        >
+                                            <User size={14} className="mr-1" />
+                                            {user.username}
+                                        </Button>
+                                    ))
+                                    : getUniqueUsernames().map(username => (
+                                        <Button
+                                            key={username}
+                                            variant={filterByUser === username ? "primary" : "outline"}
+                                            size="sm"
+                                            className="filter-button"
+                                            onClick={() => handleFilterByUser(username)}
+                                        >
+                                            <User size={14} className="mr-1" />
+                                            {username}
+                                        </Button>
+                                    ))
+                                }
+
+                                {userSearchTerm.trim().length >= 2 && searchResults.length === 0 && !isSearching && (
+                                    <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.8rem', padding: '4px' }}>
+                                        No users found
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -553,6 +648,8 @@ export default function ConstellationPage() {
                                 onClick={() => {
                                     setFilterByUser(null);
                                     setFilterByEmotion(null);
+                                    setUserSearchTerm('');
+                                    setSearchResults([]);
                                     applyFiltersAndTransform(allLetters);
                                 }}
                             >

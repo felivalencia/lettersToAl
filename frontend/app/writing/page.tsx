@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,35 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ArrowLeft, LogOut, Send, User, Info } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
+
+// Update the StarBackground component to ensure full coverage
+const StarBackground = memo(() => (
+    <div className="stars-container" style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: -1
+    }}>
+        {Array.from({ length: 100 }).map((_, i) => (
+            <div
+                key={i}
+                className="star-bg"
+                style={{
+                    top: `${Math.random() * 100}%`,
+                    left: `${Math.random() * 100}%`,
+                    width: `${Math.max(1, Math.random() * 3)}px`,
+                    height: `${Math.max(1, Math.random() * 3)}px`,
+                    opacity: Math.random() * 0.7 + 0.3,
+                    animationDelay: `${Math.random() * 5}s`,
+                    animationDuration: `${Math.random() * 5 + 3}s`,
+                    pointerEvents: 'none'
+                }}
+            />
+        ))}
+    </div>
+));
 
 export default function WritingPage() {
     const [letter, setLetter] = useState('');
@@ -173,24 +202,8 @@ export default function WritingPage() {
                 </form>
             </div>
 
-            {/* Star background for consistent look with other pages */}
-            <div className="star-background" style={{ zIndex: 1 }}>
-                <div className="stars">
-                    {Array.from({ length: 50 }).map((_, i) => (
-                        <div
-                            key={i}
-                            className="background-star"
-                            style={{
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                width: `${Math.random() * 3 + 1}px`,
-                                height: `${Math.random() * 3 + 1}px`,
-                                animationDelay: `${Math.random() * 5}s`
-                            }}
-                        />
-                    ))}
-                </div>
-            </div>
+            {/* Use the memoized StarBackground component */}
+            <StarBackground />
         </div>
     );
 } 
