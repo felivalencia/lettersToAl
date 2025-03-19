@@ -13,6 +13,7 @@ import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
 import { unifiedApi } from '@/lib/unified-api';
 import { ConstellationCanvas, ConstellationControlsRef } from '@/components/visualization/ConstellationCanvas';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 
 const VALID_EMOTIONS = [
     'happy',
@@ -81,6 +82,7 @@ export default function ConstellationPage() {
         content: string;
         username: string;
         emotion?: string;
+        userId?: string;
     }>>([]);
     const [showInfo, setShowInfo] = useState(false);
     const { user } = useAuth();
@@ -95,6 +97,9 @@ export default function ConstellationPage() {
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<Array<{ id: string, username: string }>>([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    // Add state for cached usernames
+    const [cachedUsernames, setCachedUsernames] = useState<Array<{ id: string, username: string }>>([]);
 
     useEffect(() => {
         // Fetch all letters and create the constellation
@@ -183,41 +188,52 @@ export default function ConstellationPage() {
 
     // Update applyFiltersAndTransform to use similarity data for positioning
     const applyFiltersAndTransform = (lettersToFilter: any[]) => {
-        // Apply both user and emotion filters
         let filteredLetters = lettersToFilter;
 
-        // Filter by user if set
         if (filterByUser) {
             filteredLetters = filteredLetters.filter(letter =>
-                letter.username === filterByUser ||
-                (filterByUser === 'Anonymous' && !letter.username)
+                letter.userId === filterByUser ||
+                (filterByUser === 'Anonymous' && !letter.userId)
             );
         }
 
-        // Filter by emotion if set
         if (filterByEmotion) {
             filteredLetters = filteredLetters.filter(letter =>
                 letter.emotion === filterByEmotion
             );
         }
 
-        // Calculate positions based on similarity
         const positions = calculateClusteredPositions(filteredLetters);
 
-        // Generate positions and transform to star format
-        const starLetters = filteredLetters.map((letter, index) => ({
-            id: letter.id,
-            // Use calculated positions from similarity data if available, otherwise use random
-            x: positions[letter.id]?.x || (Math.random() * 2 - 1),
-            y: positions[letter.id]?.y || (Math.random() * 2 - 1),
-            z: positions[letter.id]?.z || (Math.random() * 2 - 1),
-            size: Math.random() * 2 + 0.5, // 0.5 to 2.5
-            color: letter.color || EMOTION_COLORS[letter.emotion] || EMOTION_COLORS.default,
-            content: letter.content,
-            username: letter.username || 'Anonymous',
-            emotion: letter.emotion || 'unknown',
-            created_at: letter.createdAt || letter.created_at // Ensure we pass the creation date
-        }));
+        const starLetters = filteredLetters.map((letter) => {
+            // Initialize username as Anonymous by default
+            let username = 'Anonymous';
+
+            // Only show username if letter is not anonymous and has a userId
+            if (!letter.isAnonymous && letter.userId) {
+                // Try to find username in cached usernames
+                const cachedUser = cachedUsernames.find(u => u.id === letter.userId);
+                if (cachedUser) {
+                    username = cachedUser.username;
+                } else if (letter.username) {
+                    username = letter.username;
+                }
+            }
+
+            return {
+                id: letter.id,
+                x: positions[letter.id]?.x || (Math.random() * 2 - 1),
+                y: positions[letter.id]?.y || (Math.random() * 2 - 1),
+                z: positions[letter.id]?.z || (Math.random() * 2 - 1),
+                size: Math.random() * 2 + 0.5,
+                color: letter.color || EMOTION_COLORS[letter.emotion] || EMOTION_COLORS.default,
+                content: letter.content,
+                username: username,
+                emotion: letter.emotion || 'unknown',
+                created_at: letter.createdAt || letter.created_at,
+                userId: letter.userId
+            };
+        });
 
         setLetters(starLetters);
         setLoading(false);
@@ -287,10 +303,13 @@ export default function ConstellationPage() {
 
     // Add a function to handle user filter selection
     const handleFilterByUser = (username: string) => {
-        if (filterByUser === username) {
+        const user = searchResults.find(u => u.username === username);
+        const userId = user ? user.id : null;
+
+        if (filterByUser === userId) {
             setFilterByUser(null); // Toggle off if already selected
         } else {
-            setFilterByUser(username);
+            setFilterByUser(userId);
         }
 
         // Apply filters to all letters
@@ -302,16 +321,16 @@ export default function ConstellationPage() {
         setShowFilters(!showFilters);
     };
 
-    // Get unique usernames for the filter
-    const getUniqueUsernames = () => {
+    // Get unique userIds for the filter
+    const getUniqueUserIds = () => {
         if (!allLetters.length) return [];
 
-        const usernames = new Set<string>();
+        const userIds = new Set<string>();
         allLetters.forEach(letter => {
-            usernames.add(letter.username || 'Anonymous');
+            userIds.add(letter.userId || 'Anonymous');
         });
 
-        return Array.from(usernames).sort();
+        return Array.from(userIds).sort();
     };
 
     // Add the emotion filter handler
@@ -340,7 +359,7 @@ export default function ConstellationPage() {
         return Array.from(emotions).sort();
     };
 
-    // Add new function to search users
+    // Update searchUsers to cache results
     const searchUsers = useCallback(async (term: string) => {
         if (term.trim().length < 2) {
             setSearchResults([]);
@@ -351,12 +370,19 @@ export default function ConstellationPage() {
         try {
             const results = await unifiedApi.auth.searchUsers(term);
             setSearchResults(results);
+            // Cache the results
+            setCachedUsernames(prev => [...prev, ...results.filter(r => !prev.some(p => p.id === r.id))]);
         } catch (error) {
             console.error('Error searching users:', error);
         } finally {
             setIsSearching(false);
         }
     }, []);
+
+    // Function to remove a cached username
+    const removeCachedUsername = (username: string) => {
+        setCachedUsernames(prev => prev.filter(user => user.username !== username));
+    };
 
     // Add debounce for search term changes
     useEffect(() => {
@@ -368,6 +394,18 @@ export default function ConstellationPage() {
 
         return () => clearTimeout(timer);
     }, [userSearchTerm, searchUsers]);
+
+    // Update card component to display username
+    const renderLetterCard = (letter: { id: string; username: string; content: string; }) => (
+        <Card key={letter.id} className="letter-card">
+            <CardHeader>
+                <CardTitle>{letter.username}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <CardDescription>{letter.content}</CardDescription>
+            </CardContent>
+        </Card>
+    );
 
     return (
         <div className="constellation-fullscreen" style={{
@@ -577,32 +615,44 @@ export default function ConstellationPage() {
                                 flexWrap: 'wrap',
                                 gap: '8px'
                             }}>
-                                {/* Show search results when search term exists, otherwise show all unique usernames */}
+                                {/* Show search results when search term exists, otherwise show all unique userIds */}
                                 {userSearchTerm.trim().length >= 2
                                     ? searchResults.map(user => (
-                                        <Button
-                                            key={user.id}
-                                            variant={filterByUser === user.username ? "primary" : "outline"}
-                                            size="sm"
-                                            className="filter-button"
-                                            onClick={() => handleFilterByUser(user.username)}
-                                        >
-                                            <User size={14} className="mr-1" />
-                                            {user.username}
-                                        </Button>
+                                        <div key={user.id} style={{ display: 'flex', alignItems: 'center' }}>
+                                            <Button
+                                                variant={filterByUser === user.id ? "primary" : "outline"}
+                                                size="sm"
+                                                className="filter-button"
+                                                onClick={() => handleFilterByUser(user.username)}
+                                            >
+                                                <User size={14} className="mr-1" />
+                                                {user.username}
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => removeCachedUsername(user.username)}>
+                                                <X size={12} />
+                                            </Button>
+                                        </div>
                                     ))
-                                    : getUniqueUsernames().map(username => (
-                                        <Button
-                                            key={username}
-                                            variant={filterByUser === username ? "primary" : "outline"}
-                                            size="sm"
-                                            className="filter-button"
-                                            onClick={() => handleFilterByUser(username)}
-                                        >
-                                            <User size={14} className="mr-1" />
-                                            {username}
-                                        </Button>
-                                    ))
+                                    : getUniqueUserIds().map(userId => {
+                                        const user = searchResults.find(u => u.id === userId);
+                                        const username = user ? user.username : 'Anonymous';
+                                        return (
+                                            <div key={userId} style={{ display: 'flex', alignItems: 'center' }}>
+                                                <Button
+                                                    variant={filterByUser === userId ? "primary" : "outline"}
+                                                    size="sm"
+                                                    className="filter-button"
+                                                    onClick={() => handleFilterByUser(username)}
+                                                >
+                                                    <User size={14} className="mr-1" />
+                                                    {username}
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => removeCachedUsername(username)}>
+                                                    <X size={12} />
+                                                </Button>
+                                            </div>
+                                        );
+                                    })
                                 }
 
                                 {userSearchTerm.trim().length >= 2 && searchResults.length === 0 && !isSearching && (

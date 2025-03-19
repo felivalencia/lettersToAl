@@ -65,7 +65,22 @@ export const getLetterById = async (req: Request, res: Response) => {
 
         const { data: letter, error } = await supabase
             .from('letters')
-            .select('id, content, drawing, created_at, anonymous')
+            .select(`
+                id, 
+                content, 
+                drawing, 
+                created_at, 
+                anonymous,
+                author_id,
+                users:author_id (
+                    id,
+                    username
+                ),
+                embedding,
+                emotion,
+                color,
+                location
+            `)
             .eq('id', id)
             .single();
 
@@ -76,7 +91,34 @@ export const getLetterById = async (req: Request, res: Response) => {
             throw error;
         }
 
-        res.json(letter);
+        if (letter) {
+            // Transform letter to match frontend expected format
+            const transformedLetter: any = {
+                id: letter.id,
+                content: letter.content,
+                drawing: letter.drawing,
+                createdAt: letter.created_at,
+                isAnonymous: letter.anonymous,
+                embedding: letter.embedding,
+                emotion: letter.emotion,
+                color: letter.color,
+                location: letter.location
+            };
+
+            // Set username and userId only if not anonymous
+            if (!letter.anonymous && letter.users) {
+                // @ts-ignore - Extract username from the joined user data
+                transformedLetter.username = letter.users.username;
+                // Preserve userId for non-anonymous letters
+                transformedLetter.userId = letter.author_id;
+            } else {
+                transformedLetter.username = 'Anonymous';
+            }
+
+            res.json(transformedLetter);
+        } else {
+            res.status(404).json({ error: 'Letter not found' });
+        }
     } catch (error) {
         console.error('Error getting letter:', error);
         res.status(500).json({ error: 'Failed to get letter' });
@@ -134,5 +176,131 @@ export const getLetterMap = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error getting letter map:', error);
         res.status(500).json({ error: 'Failed to get letter map' });
+    }
+};
+
+/**
+ * @desc    Get all letters
+ * @route   GET /api/letters
+ * @access  Public
+ */
+export const getAllLetters = async (req: Request, res: Response) => {
+    try {
+        // Fetch all letters with user data joined
+        const { data: letters, error } = await supabase
+            .from('letters')
+            .select(`
+                id, 
+                content, 
+                drawing, 
+                created_at, 
+                anonymous,
+                author_id,
+                users:author_id (
+                    id,
+                    username
+                ),
+                embedding,
+                emotion,
+                color,
+                location
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        // Transform the data for client-side use
+        const transformedLetters = letters.map(letter => {
+            // Create a standardized letter object
+            const transformedLetter: any = {
+                id: letter.id,
+                content: letter.content,
+                drawing: letter.drawing,
+                createdAt: letter.created_at,
+                isAnonymous: letter.anonymous,
+                embedding: letter.embedding,
+                emotion: letter.emotion,
+                color: letter.color,
+                location: letter.location
+            };
+
+            // Add username and userId only if not anonymous
+            if (!letter.anonymous && letter.users) {
+                // @ts-ignore - Extract username from the joined user data
+                transformedLetter.username = letter.users.username;
+                // Preserve userId for non-anonymous letters
+                transformedLetter.userId = letter.author_id;
+            } else {
+                transformedLetter.username = 'Anonymous';
+            }
+
+            return transformedLetter;
+        });
+
+        res.json(transformedLetters);
+    } catch (error) {
+        console.error('Error getting all letters:', error);
+        res.status(500).json({ error: 'Failed to get letters' });
+    }
+};
+
+/**
+ * Update username field for letters that are not anonymous
+ * @route POST /api/letters/update-usernames
+ * @access Public (for testing)
+ */
+export const updateUsernames = async (req: Request, res: Response) => {
+    try {
+        // Get all non-anonymous letters
+        const { data: letters, error: fetchError } = await supabase
+            .from('letters')
+            .select('*')
+            .eq('is_anonymous', false);
+
+        if (fetchError) throw fetchError;
+
+        let updatedCount = 0;
+
+        // Process each letter
+        for (const letter of letters || []) {
+            if (letter.user_id) {
+                // Look up the username
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('username')
+                    .eq('id', letter.user_id)
+                    .single();
+
+                if (userError) {
+                    console.error(`Error fetching user ${letter.user_id}:`, userError);
+                    continue;
+                }
+
+                if (userData && userData.username) {
+                    // Update the letter with the username
+                    const { error: updateError } = await supabase
+                        .from('letters')
+                        .update({ username: userData.username })
+                        .eq('id', letter.id);
+
+                    if (updateError) {
+                        console.error(`Error updating letter ${letter.id}:`, updateError);
+                    } else {
+                        updatedCount++;
+                    }
+                }
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Updated ${updatedCount} letters`,
+            processed: letters?.length || 0
+        });
+    } catch (error) {
+        console.error('Error updating usernames:', error);
+        res.status(500).json({ error: 'Failed to update usernames' });
     }
 };

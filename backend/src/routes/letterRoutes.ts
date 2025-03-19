@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as letterService from '../services/letterService';
 import * as authService from '../services/authService';
 import { AuthUser } from '../services/authService';
+import { updateUsernames } from '../controllers/lettersController';
 
 // Create an interface that extends Express Request
 interface AuthenticatedRequest extends Request {
@@ -140,5 +141,8 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
         res.status(500).json({ error: error.message || 'Failed to create letter' });
     }
 });
+
+// Add the update-usernames route
+router.post('/update-usernames', updateUsernames);
 
 export default router; 
