@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { Eraser, Paintbrush, Undo2, Download, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 interface DrawingCanvasProps {
     onSave: (dataUrl: string) => void;

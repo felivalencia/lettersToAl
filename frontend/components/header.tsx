@@ -16,7 +16,7 @@ export default function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
-        <header className="relative z-10 py-4 px-6 md:px-10 backdrop-blur-md">
+        <header className="relative z-10 py-4 px-6 md:px-10">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
                 <Link href="/" className="text-2xl font-serif">
                     Letters to Al
@@ -50,7 +50,7 @@ export default function Header() {
 
             {/* Mobile menu */}
             {isMenuOpen && (
-                <div className="md:hidden absolute top-full left-0 right-0 bg-cosmic-dark bg-opacity-95 backdrop-blur-md border-t border-nebula-purple border-opacity-30 py-4">
+                <div className="md:hidden absolute top-full left-0 right-0 bg-cosmic-dark bg-opacity-95 border-t border-nebula-purple border-opacity-30 py-4">
                     <nav className="flex flex-col space-y-4 px-6">
                         {NAV_LINKS.map(link => (
                             <Link

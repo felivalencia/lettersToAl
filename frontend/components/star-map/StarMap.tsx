@@ -112,7 +112,7 @@ export default function StarMap() {
             </Canvas>
 
             {/* Information overlay */}
-            <div className="absolute top-4 right-4 bg-cosmic-dark bg-opacity-70 backdrop-blur-sm p-3 rounded-lg text-sm z-10">
+            <div className="absolute top-4 right-4 bg-cosmic-dark bg-opacity-70 p-3 rounded-lg text-sm z-10">
                 <p>Stars: {stars.length}</p>
                 <p className="text-xs mt-1 text-opacity-70">Drag to rotate. Scroll to zoom.</p>
             </div>

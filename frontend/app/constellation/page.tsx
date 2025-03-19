@@ -313,9 +313,49 @@ export default function ConstellationPage() {
     };
 
     return (
-        <div className="constellation-fullscreen">
-            <div className="constellation-overlay">
-                <div className="constellation-header">
+        <div className="constellation-fullscreen" style={{
+            position: 'relative',
+            width: '100%',
+            height: '100vh',
+            overflow: 'hidden',
+            background: 'black'
+        }}>
+            {/* Canvas container for stars - needs to be first in the DOM for proper stacking */}
+            {!loading && letters.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 1,
+                    overflow: 'hidden'
+                }}>
+                    <ConstellationCanvas
+                        letters={letters}
+                        controlsRef={controlsRef}
+                        similarityData={similarityData}
+                    />
+                </div>
+            )}
+
+            {/* Overlay for UI elements - positioned above the canvas */}
+            <div className="constellation-overlay" style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 5,
+                pointerEvents: 'none' // Let clicks pass through to the 3D canvas by default
+            }}>
+                {/* Header always visible */}
+                <div className="constellation-header" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '16px 24px',
+                    pointerEvents: 'auto' // Make header buttons clickable
+                }}>
                     <div className="constellation-nav">
                         <Link href="/">
                             <Button variant="ghost" size="icon" className="nav-button" title="Home">
@@ -337,8 +377,6 @@ export default function ConstellationPage() {
                             </Link>
                         )}
                     </div>
-
-                    {/* <h1 className="constellation-title">Stellar Constellation</h1> */}
 
                     <div className="constellation-actions">
                         <Button
@@ -365,9 +403,25 @@ export default function ConstellationPage() {
 
                 {/* Add the filter panel */}
                 {showFilters && (
-                    <div className="constellation-filters">
-                        <div className="filters-header">
-                            <h3>Filter Letters</h3>
+                    <div className="constellation-filters" style={{
+                        position: 'absolute',
+                        top: '80px',
+                        right: '24px',
+                        width: '300px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        zIndex: 10,
+                        pointerEvents: 'auto', // Make filters interactive
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                    }}>
+                        <div className="filters-header" style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px'
+                        }}>
+                            <h3 style={{ margin: 0 }}>Filter Letters</h3>
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -378,9 +432,13 @@ export default function ConstellationPage() {
                             </Button>
                         </div>
 
-                        <div className="filters-section">
-                            <h4>By Author</h4>
-                            <div className="filters-content">
+                        <div className="filters-section" style={{ marginBottom: '16px' }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '8px' }}>By Author</h4>
+                            <div className="filters-content" style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '8px'
+                            }}>
                                 {getUniqueUsernames().map(username => (
                                     <Button
                                         key={username}
@@ -396,9 +454,13 @@ export default function ConstellationPage() {
                             </div>
                         </div>
 
-                        <div className="filters-section">
-                            <h4>By Emotion</h4>
-                            <div className="filters-content">
+                        <div className="filters-section" style={{ marginBottom: '16px' }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '8px' }}>By Emotion</h4>
+                            <div className="filters-content" style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '8px'
+                            }}>
                                 {getUniqueEmotions().map(emotion => (
                                     <Button
                                         key={emotion}
@@ -437,7 +499,20 @@ export default function ConstellationPage() {
                 )}
 
                 {showInfo && (
-                    <div className="constellation-info">
+                    <div className="constellation-info" style={{
+                        position: 'absolute',
+                        top: '80px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        maxWidth: '90%',
+                        width: '600px',
+                        zIndex: 10,
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                        pointerEvents: 'auto'
+                    }}>
                         <p>Each star represents a letter. Click on any star to read its contents.</p>
                         <p>Currently showing <strong>{letters.length}</strong> of <strong>{allLetters.length}</strong> letters.</p>
                         {filterByUser && (
@@ -452,7 +527,19 @@ export default function ConstellationPage() {
                 )}
 
                 {!loading && letters.length > 0 && (
-                    <div className="constellation-controls">
+                    <div className="constellation-controls" style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 10,
+                        display: 'flex',
+                        gap: '8px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        pointerEvents: 'auto'
+                    }}>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -484,28 +571,56 @@ export default function ConstellationPage() {
                 )}
             </div>
 
-            {loading ? (
-                <div className="flex items-center justify-center h-full">
+            {/* Loading state */}
+            {loading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                    background: 'black',
+                    zIndex: 20 // Above everything else when loading
+                }}>
                     <LoadingSpinner />
+                    <p style={{ marginTop: '16px', color: 'white' }}>Loading constellation...</p>
                 </div>
-            ) : letters.length === 0 ? (
-                <div className="empty-constellation">
-                    <div className="empty-message">
-                        <p>No letters found in the constellation.</p>
+            )}
+
+            {/* Empty state */}
+            {!loading && letters.length === 0 && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'black',
+                    zIndex: 4
+                }}>
+                    <div style={{
+                        textAlign: 'center',
+                        maxWidth: '400px',
+                        padding: '24px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        borderRadius: '8px'
+                    }}>
+                        <p style={{ marginBottom: '16px' }}>No letters found in the constellation.</p>
                         <Link href="/writing">
-                            <Button className="empty-action">
+                            <Button>
                                 Write the first letter
                             </Button>
                         </Link>
                     </div>
                 </div>
-            ) : (
-                <ConstellationCanvas
-                    letters={letters}
-                    controlsRef={controlsRef}
-                    similarityData={similarityData}
-                />
             )}
         </div>
     );
-} 
+}

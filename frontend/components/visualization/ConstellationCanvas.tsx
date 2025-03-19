@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useState, useCallback, useEffect, useImperativeHandle } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Stars, OrbitControls, Billboard, Line } from '@react-three/drei';
 import { useSpring, animated } from '@react-spring/three';
@@ -26,12 +26,9 @@ const Star = ({ position, color, size, id, username, emotion, connections, onHov
     const [hovered, setHovered] = useState(false);
     const starRef = useRef<THREE.Mesh>(null);
 
-    // Animation for hover effect
-    const { scale, emissive } = useSpring({
-        scale: hovered ? 1.5 : 1,
-        emissive: hovered ? 0.5 : 0.2,
-        config: { tension: 300, friction: 10 }
-    });
+    // Simplified scaling without animation to avoid blur
+    const scale = hovered ? 1.5 : 1;
+    const emissiveIntensity = hovered ? 2.0 : 1.2;
 
     const handleClick = useCallback(() => {
         router.push(`/letters/${id}`);
@@ -47,14 +44,6 @@ const Star = ({ position, color, size, id, username, emotion, connections, onHov
         setHovered(false);
         onHover(id, username, emotion, position, false);
     };
-
-    useFrame(() => {
-        if (starRef.current) {
-            // Add a subtle pulsing effect
-            starRef.current.rotation.y += 0.003;
-            starRef.current.rotation.z += 0.001;
-        }
-    });
 
     return (
         <group>
@@ -78,7 +67,7 @@ const Star = ({ position, color, size, id, username, emotion, connections, onHov
                 );
             })}
 
-            <animated.mesh
+            <mesh
                 ref={starRef}
                 position={position}
                 scale={scale}
@@ -86,14 +75,26 @@ const Star = ({ position, color, size, id, username, emotion, connections, onHov
                 onPointerOver={handlePointerOver}
                 onPointerOut={handlePointerOut}
             >
-                <sphereGeometry args={[size * 0.01, 16, 16]} />
-                <animated.meshStandardMaterial
+                <sphereGeometry args={[size * 0.01, 64, 64]} />
+                <meshStandardMaterial
                     color={color}
                     emissive={color}
-                    emissiveIntensity={emissive}
+                    emissiveIntensity={emissiveIntensity}
                     toneMapped={false}
+                    roughness={0.1}
+                    metalness={0.2}
                 />
-            </animated.mesh>
+            </mesh>
+
+            {/* Add a point light for better glow effect */}
+            {hovered && (
+                <pointLight
+                    distance={12}
+                    intensity={0.7}
+                    color={color}
+                    position={position}
+                />
+            )}
         </group>
     );
 };
@@ -158,7 +159,7 @@ const Scene = ({
     onUpdatePosition: (position: { x: number, y: number } | null) => void,
     similarityData?: Record<string, Array<{ id: string, similarity: number }>>
 }) => {
-    const { camera } = useThree();
+    const { camera, gl } = useThree();
     const starsGroup = useRef<THREE.Group>(null);
 
     // Calculate connections between stars
@@ -169,7 +170,10 @@ const Scene = ({
         const connectionThreshold = starData.length > 30 ? 0.3 : 0.5; // Smaller threshold for many stars
 
         return starData.map((star, index) => {
-            const connections: Array<{ position: [number, number, number]; similarity?: number }> = [];
+            const connections: Array<{
+                position: [number, number, number];
+                similarity?: number;
+            }> = [];
 
             // Priority 1: Add connections based on similarity data if available
             if (similarityData && similarityData[star.id]) {
@@ -232,15 +236,30 @@ const Scene = ({
         });
     }, [starData, similarityData]);
 
-    // Set initial camera position
+    // Set initial camera position and force pixel ratio
     useEffect(() => {
         camera.position.set(0, 0, 2);
-    }, [camera]);
+        camera.updateProjectionMatrix();
+
+        // Force a high-quality pixel ratio to avoid blur
+        gl.setPixelRatio(2);
+
+        // Disable auto-clear to prevent flickering
+        gl.autoClear = false;
+    }, [camera, gl]);
+
+    // Single useFrame to optimize rendering
+    useFrame(() => {
+        // Clear manually for better control
+        gl.clear();
+
+        // No animations or continuous rotation here to prevent blur
+    });
 
     return (
         <group ref={starsGroup}>
-            <ambientLight intensity={0.5} />
-            <pointLight position={[10, 10, 10]} intensity={0.8} />
+            <ambientLight intensity={0.3} />
+            <pointLight position={[10, 10, 10]} intensity={1} />
 
             <Stars
                 radius={100}
@@ -249,7 +268,7 @@ const Scene = ({
                 factor={4}
                 saturation={0}
                 fade
-                speed={1}
+                speed={0}
             />
 
             {starsWithConnections.map((star) => (
@@ -274,6 +293,7 @@ const Scene = ({
                 zoomSpeed={0.6}
                 panSpeed={0.5}
                 rotateSpeed={0.5}
+                dampingFactor={0.1}
             />
 
             {/* Track the position of the hovered star */}
@@ -317,6 +337,27 @@ export function ConstellationCanvas({ letters, controlsRef, similarityData = {} 
     const canvasRef = useRef<HTMLDivElement>(null);
     const orbitControlsRef = useRef<OrbitControlsImpl>(null);
 
+    // Stop any processes that might be running in the background
+    useEffect(() => {
+        // Apply styles to the HTML element to prevent any scaling issues
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+
+        // Force high-quality rendering for the entire document
+        document.body.style.textRendering = 'optimizeLegibility';
+        (document.body.style as any).webkitFontSmoothing = 'antialiased';
+        (document.body.style as any).mozOsxFontSmoothing = 'grayscale';
+
+        return () => {
+            // Clean up on unmount
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            document.body.style.textRendering = '';
+            (document.body.style as any).webkitFontSmoothing = '';
+            (document.body.style as any).mozOsxFontSmoothing = '';
+        };
+    }, []);
+
     const handleStarHover = useCallback((id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean) => {
         if (isHovered) {
             setHoveredStar({ id, username, emotion, position });
@@ -338,17 +379,24 @@ export function ConstellationCanvas({ letters, controlsRef, similarityData = {} 
         },
         zoomIn: () => {
             if (orbitControlsRef.current) {
-                orbitControlsRef.current.zoomIn();
+                // Manually adjust zoom by modifying the camera position
+                const cameraPosition = orbitControlsRef.current.object.position.clone();
+                const zoomDirection = new Vector3(0, 0, 0).sub(cameraPosition).normalize();
+                orbitControlsRef.current.object.position.addScaledVector(zoomDirection, 0.5);
+                orbitControlsRef.current.update();
             }
         },
         zoomOut: () => {
             if (orbitControlsRef.current) {
-                orbitControlsRef.current.zoomOut();
+                // Manually adjust zoom by modifying the camera position
+                const cameraPosition = orbitControlsRef.current.object.position.clone();
+                const zoomDirection = new Vector3(0, 0, 0).sub(cameraPosition).normalize();
+                orbitControlsRef.current.object.position.addScaledVector(zoomDirection, -0.5);
+                orbitControlsRef.current.update();
             }
         },
         rotateTo: (x: number, y: number, z: number) => {
             if (orbitControlsRef.current) {
-                // This is a simplified implementation
                 orbitControlsRef.current.object.position.set(x, y, z);
                 orbitControlsRef.current.update();
             }
@@ -356,10 +404,36 @@ export function ConstellationCanvas({ letters, controlsRef, similarityData = {} 
     }), []);
 
     return (
-        <div className="constellation-canvas" ref={canvasRef}>
+        <div
+            className="constellation-canvas"
+            ref={canvasRef}
+            style={{
+                width: '100%',
+                height: '100vh',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                overflow: 'hidden',
+                backgroundColor: 'black',
+                imageRendering: 'crisp-edges' as any
+            }}
+        >
             <Canvas
-                camera={{ position: [0, 0, 2], fov: 75 }}
-                style={{ background: 'black' }}
+                camera={{ position: [0, 0, 2], fov: 50, near: 0.1, far: 1000 }}
+                style={{
+                    background: 'black',
+                    width: '100%',
+                    height: '100%',
+                    imageRendering: 'crisp-edges' as any
+                }}
+                dpr={window.devicePixelRatio || 2}
+                gl={{
+                    antialias: true,
+                    powerPreference: 'high-performance',
+                    precision: 'highp',
+                    pixelRatio: window.devicePixelRatio || 2
+                }}
+                frameloop="demand"
             >
                 <Scene
                     starData={letters}
@@ -376,23 +450,31 @@ export function ConstellationCanvas({ letters, controlsRef, similarityData = {} 
                 <div
                     className="star-tooltip"
                     style={{
-                        position: 'absolute',
-                        top: `${tooltipPosition.y}px`,
-                        left: `${tooltipPosition.x}px`,
-                        transform: 'translate(-50%, -100%)',
+                        position: 'fixed',
+                        top: `${Math.floor(tooltipPosition.y)}px`,
+                        left: `${Math.floor(tooltipPosition.x)}px`,
+                        transform: 'translate(-50%, -130%)',
                         padding: '8px 12px',
-                        background: 'rgba(0, 0, 0, 0.7)',
+                        background: 'rgba(0, 0, 0, 0.9)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '4px',
                         color: 'white',
                         zIndex: 1000,
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                        fontSize: '14px',
+                        lineHeight: '1.4',
+                        fontWeight: '400',
+                        willChange: 'transform',
+                        imageRendering: 'crisp-edges' as any
                     }}
                 >
                     <p style={{ margin: '0 0 4px 0', fontWeight: 'bold' }}>
                         {hoveredStar.username}
                     </p>
                     {hoveredStar.emotion && (
-                        <p style={{ margin: '0', opacity: 0.8 }}>
+                        <p style={{ margin: '0', opacity: 0.9 }}>
                             {hoveredStar.emotion}
                         </p>
                     )}
