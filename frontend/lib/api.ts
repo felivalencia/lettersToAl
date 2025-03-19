@@ -129,7 +129,16 @@ export const api = {
                     throw new Error(error.error || 'Failed to get user');
                 }
 
-                return response.json();
+                const userData = await response.json();
+                console.log('API getMe response:', userData);
+
+                // Ensure username exists
+                if (userData && userData.user && (!userData.user.username || userData.user.username.trim() === '')) {
+                    console.warn('User found but username is missing or empty', userData);
+                    userData.user.username = 'User';
+                }
+
+                return userData.user || null;
             } catch (error) {
                 console.error('Error getting current user:', error);
                 return null;

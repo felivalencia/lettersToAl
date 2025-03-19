@@ -188,7 +188,8 @@ export default function ConstellationPage() {
             color: letter.color || EMOTION_COLORS[letter.emotion] || EMOTION_COLORS.default,
             content: letter.content,
             username: letter.username || 'Anonymous',
-            emotion: letter.emotion || 'unknown'
+            emotion: letter.emotion || 'unknown',
+            created_at: letter.createdAt || letter.created_at // Ensure we pass the creation date
         }));
 
         setLetters(starLetters);
@@ -320,6 +321,25 @@ export default function ConstellationPage() {
             overflow: 'hidden',
             background: 'black'
         }}>
+            {/* Star background for consistent look with other pages */}
+            <div className="star-background" style={{ zIndex: 1 }}>
+                <div className="stars">
+                    {Array.from({ length: 50 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="background-star"
+                            style={{
+                                top: `${Math.random() * 100}%`,
+                                left: `${Math.random() * 100}%`,
+                                width: `${Math.random() * 3 + 1}px`,
+                                height: `${Math.random() * 3 + 1}px`,
+                                animationDelay: `${Math.random() * 5}s`
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+
             {/* Canvas container for stars - needs to be first in the DOM for proper stacking */}
             {!loading && letters.length > 0 && (
                 <div style={{
@@ -354,48 +374,92 @@ export default function ConstellationPage() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     padding: '16px 24px',
-                    pointerEvents: 'auto' // Make header buttons clickable
+                    pointerEvents: 'auto', // Make header buttons clickable
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
-                    <div className="constellation-nav">
+                    <div className="constellation-nav" style={{ display: 'flex', gap: '10px' }}>
                         <Link href="/">
-                            <Button variant="ghost" size="icon" className="nav-button" title="Home">
-                                <Home size={20} />
+                            <Button variant="secondary" size="sm" className="nav-button" title="Home" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}>
+                                <Home size={16} />
                             </Button>
                         </Link>
 
                         <Link href="/writing">
-                            <Button variant="ghost" size="icon" className="nav-button" title="Write a letter">
-                                <Pen size={20} />
+                            <Button variant="primary" size="sm" className="nav-button" title="Write a letter" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}>
+                                <Pen size={16} />
                             </Button>
                         </Link>
 
                         {user && (
                             <Link href="/profile">
-                                <Button variant="ghost" size="icon" className="nav-button" title="Your profile">
-                                    <User size={20} />
+                                <Button variant="secondary" size="sm" className="nav-button" title="Your profile" style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    padding: 0
+                                }}>
+                                    <User size={16} />
                                 </Button>
                             </Link>
                         )}
                     </div>
 
-                    <div className="constellation-actions">
+                    <div className="constellation-actions" style={{ display: 'flex', gap: '10px' }}>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="secondary"
+                            size="sm"
                             className="nav-button"
                             title="Filter letters"
                             onClick={toggleFilters}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}
                         >
-                            <Filter size={20} />
+                            <Filter size={16} />
                         </Button>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="secondary"
+                            size="sm"
                             className="nav-button"
                             title="Information"
                             onClick={toggleInfo}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}
                         >
-                            <Info size={20} />
+                            <Info size={16} />
                         </Button>
                         <ThemeToggle />
                     </div>
@@ -534,38 +598,65 @@ export default function ConstellationPage() {
                         transform: 'translateX(-50%)',
                         zIndex: 10,
                         display: 'flex',
-                        gap: '8px',
+                        gap: '10px',
                         background: 'rgba(0, 0, 0, 0.5)',
                         borderRadius: '8px',
-                        padding: '8px',
+                        padding: '10px',
                         pointerEvents: 'auto'
                     }}>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="secondary"
+                            size="sm"
                             className="control-button"
                             title="Zoom in"
                             onClick={handleZoomIn}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}
                         >
-                            <ZoomIn size={18} />
+                            <ZoomIn size={16} />
                         </Button>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="secondary"
+                            size="sm"
                             className="control-button"
                             title="Zoom out"
                             onClick={handleZoomOut}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}
                         >
-                            <ZoomOut size={18} />
+                            <ZoomOut size={16} />
                         </Button>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="secondary"
+                            size="sm"
                             className="control-button"
                             title="Reset view"
                             onClick={handleReset}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                padding: 0
+                            }}
                         >
-                            <RotateCcw size={18} />
+                            <RotateCcw size={16} />
                         </Button>
                     </div>
                 )}

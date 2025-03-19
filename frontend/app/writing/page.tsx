@@ -172,6 +172,25 @@ export default function WritingPage() {
                     </Button>
                 </form>
             </div>
+
+            {/* Star background for consistent look with other pages */}
+            <div className="star-background" style={{ zIndex: 1 }}>
+                <div className="stars">
+                    {Array.from({ length: 50 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="background-star"
+                            style={{
+                                top: `${Math.random() * 100}%`,
+                                left: `${Math.random() * 100}%`,
+                                width: `${Math.random() * 3 + 1}px`,
+                                height: `${Math.random() * 3 + 1}px`,
+                                animationDelay: `${Math.random() * 5}s`
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
         </div>
     );
 } 

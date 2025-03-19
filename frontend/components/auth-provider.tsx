@@ -41,6 +41,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const checkAuth = async () => {
             try {
                 const currentUser = await api.auth.getMe()
+                console.log('Retrieved user from auth:', currentUser)
+
+                if (currentUser && (!currentUser.username || currentUser.username.trim() === '')) {
+                    console.warn('User found but username is missing or empty:', currentUser)
+                    // Set a default username if missing 
+                    currentUser.username = 'User'
+                }
+
                 setUser(currentUser)
             } catch (error) {
                 console.error('Error checking authentication:', error)

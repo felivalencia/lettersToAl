@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { ArrowLeft, Calendar, User } from 'lucide-react'
+import { ArrowLeft, Calendar, User, Pen } from 'lucide-react'
 import { api, Letter } from '@/lib/api'
 
 interface LetterPageProps {
@@ -40,27 +40,60 @@ export default function LetterPage({ params }: LetterPageProps) {
     }, [params.id])
 
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })
-    }
+        try {
+            const date = new Date(dateString);
+
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                return "Recently";
+            }
+
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return "Recently";
+        }
+    };
 
     return (
         <div className="letter-detail-container">
-            <div className="theme-toggle-container">
-                <ThemeToggle />
-            </div>
-
-            <div className="back-button-container">
+            <div className="nav-container" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.5rem',
+                position: 'relative',
+                zIndex: 10,
+                width: '100%'
+            }}>
                 <Link href="/constellation">
-                    <Button variant="ghost">
-                        <ArrowLeft className="icon-left" />
+                    <Button variant="secondary" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        <ArrowLeft className="icon-left" size={16} />
                         Back to Constellation
                     </Button>
                 </Link>
+
+                <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Link href="/writing">
+                        <Button variant="primary" style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                        }}>
+                            <Pen className="icon-left" size={16} />
+                            Write New Letter
+                        </Button>
+                    </Link>
+                    <ThemeToggle />
+                </div>
             </div>
 
             {isLoading ? (
@@ -72,7 +105,7 @@ export default function LetterPage({ params }: LetterPageProps) {
                 <div className="error-container">
                     <h2 className="error-title">Error</h2>
                     <p className="error-message">{error}</p>
-                    <Button onClick={() => router.push('/constellation')}>
+                    <Button variant="secondary" onClick={() => router.push('/constellation')}>
                         Return to Constellation
                     </Button>
                 </div>
@@ -82,13 +115,36 @@ export default function LetterPage({ params }: LetterPageProps) {
                         <div className="letter-meta">
                             <div className="letter-author">
                                 <User className="meta-icon" />
-                                <span>{letter.isAnonymous ? 'Anonymous' : letter.username || 'Anonymous'}</span>
+                                <span>
+                                    {letter.isAnonymous
+                                        ? 'Anonymous'
+                                        : (letter.username && letter.username.trim() !== ''
+                                            ? letter.username
+                                            : 'Anonymous')}
+                                </span>
                             </div>
                             <div className="letter-date">
                                 <Calendar className="meta-icon" />
                                 <span>{formatDate(letter.createdAt)}</span>
                             </div>
                         </div>
+
+                        {letter.emotion && (
+                            <div className="letter-emotion" style={{
+                                color: letter.color || 'inherit',
+                                display: 'flex',
+                                alignItems: 'center',
+                                marginBottom: '1rem',
+                                marginTop: '-0.5rem'
+                            }}>
+                                <span style={{
+                                    fontSize: '0.95rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    Feeling: {letter.emotion}
+                                </span>
+                            </div>
+                        )}
                     </CardHeader>
 
                     <CardContent>
@@ -100,14 +156,14 @@ export default function LetterPage({ params }: LetterPageProps) {
                     </CardContent>
 
                     <CardFooter>
-                        <div className="letter-actions">
+                        <div className="letter-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', width: '100%' }}>
                             <Link href="/writing">
-                                <Button>
+                                <Button variant="primary">
                                     Write Your Own Letter
                                 </Button>
                             </Link>
                             <Link href="/constellation">
-                                <Button variant="outline">
+                                <Button variant="secondary">
                                     Back to Constellation
                                 </Button>
                             </Link>
