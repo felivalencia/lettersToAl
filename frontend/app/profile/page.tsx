@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { ArrowLeft, LogOut, Plus, User } from 'lucide-react'
+import { ArrowLeft, LogOut, Plus, User, Network } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { api, Letter } from '@/lib/api'
 
@@ -121,6 +121,10 @@ export default function ProfilePage() {
                         <Link href="/profile" className="profile-link">
                             <User className="profile-icon" />
                             <span className="username">{user.username}</span>
+                        </Link>
+                        <Link href="/constellation" className="constellation-link">
+                            <Network className="constellation-icon" size={20} />
+                            <span className="visually-hidden">View Constellation</span>
                         </Link>
                         <Button
                             variant="ghost"

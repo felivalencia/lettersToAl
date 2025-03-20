@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { ArrowLeft, LogOut, Send, User, Info } from 'lucide-react';
+import { ArrowLeft, LogOut, Send, User, Info, CheckCircle, Network } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { api } from '@/lib/api';
 
@@ -45,6 +45,7 @@ export default function WritingPage() {
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [showSuccess, setShowSuccess] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, isLoading, logout } = useAuth();
@@ -69,6 +70,7 @@ export default function WritingPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setShowSuccess(false);
 
         if (!letter.trim()) {
             setError('Please write something before submitting');
@@ -85,7 +87,15 @@ export default function WritingPage() {
                 isAnonymous: anonymousMode || isAnonymous
             });
 
-            router.push('/constellation');
+            // Stay on the writing page instead of redirecting
+            setLetter(''); // Clear the letter content
+            setShowSuccess(true); // Show success message
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                setShowSuccess(false);
+            }, 3000);
+
         } catch (err) {
             console.error('Failed to submit letter', err);
             setError('Failed to submit your letter. Please try again.');
@@ -121,6 +131,10 @@ export default function WritingPage() {
                         <Link href="/profile" className="profile-link">
                             <User className="profile-icon" />
                             <span className="username">{user.username}</span>
+                        </Link>
+                        <Link href="/constellation" className="constellation-link">
+                            <Network className="constellation-icon" size={20} />
+                            <span className="visually-hidden">View Constellation</span>
                         </Link>
                         <Button
                             variant="ghost"
@@ -180,6 +194,13 @@ export default function WritingPage() {
 
                     {error && (
                         <div className="error-message">{error}</div>
+                    )}
+
+                    {showSuccess && (
+                        <div className="success-message">
+                            <CheckCircle className="icon-left" />
+                            <span>Your letter has been sent successfully!</span>
+                        </div>
                     )}
 
                     <Button

@@ -46,6 +46,35 @@
     }
 }
 
+.constellation-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: opacity 0.2s ease;
+
+    .constellation-icon {
+        color: var(--color-primary);
+    }
+
+    &:hover {
+        opacity: 0.8;
+    }
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
 .anonymous-info {
     display: flex;
     align-items: center;
@@ -226,6 +255,19 @@
     color: var(--color-destructive);
     font-size: 0.875rem;
     margin-top: -0.5rem;
+    animation: fadeIn 0.3s ease;
+}
+
+.success-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background-color: rgba(0, 200, 83, 0.1);
+    border: 1px solid rgba(0, 200, 83, 0.3);
+    border-radius: 0.5rem;
+    color: var(--color-success, green);
     animation: fadeIn 0.3s ease;
 }
 
