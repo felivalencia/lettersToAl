@@ -1,15 +1,44 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { ArrowLeft, LogOut, Plus } from 'lucide-react'
+import { ArrowLeft, LogOut, Plus, User } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { api, Letter } from '@/lib/api'
+
+// Memoized StarBackground component for consistent look
+const StarBackground = memo(() => (
+    <div className="stars-container" style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: -1
+    }}>
+        {Array.from({ length: 100 }).map((_, i) => (
+            <div
+                key={i}
+                className="star-bg"
+                style={{
+                    top: `${Math.random() * 100}%`,
+                    left: `${Math.random() * 100}%`,
+                    width: `${Math.max(1, Math.random() * 3)}px`,
+                    height: `${Math.max(1, Math.random() * 3)}px`,
+                    opacity: Math.random() * 0.7 + 0.3,
+                    animationDelay: `${Math.random() * 5}s`,
+                    animationDuration: `${Math.random() * 5 + 3}s`,
+                    pointerEvents: 'none'
+                }}
+            />
+        ))}
+    </div>
+));
 
 export default function ProfilePage() {
     const [letters, setLetters] = useState<Letter[]>([])
@@ -78,157 +107,126 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="profile-container">
-            {/* Large username header at the top */}
-            <div className="username-header" style={{
-                textAlign: 'center',
-                padding: '2rem 1rem 1rem',
-                borderBottom: '1px solid var(--color-border)',
-                marginBottom: '1rem',
-                position: 'relative',
-                zIndex: 2
-            }}>
-                <h1 style={{
-                    fontSize: '2.5rem',
-                    marginBottom: '0.5rem',
-                    fontFamily: 'var(--font-playfair), serif'
-                }}>
-                    {user && typeof user.username === 'string' && user.username.trim()
-                        ? `${user.username}'s Profile`
-                        : "Your Profile"}
-                </h1>
-            </div>
-
-            <div className="nav-container" style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '0.5rem 1.5rem 1.5rem',
-                position: 'relative',
-                zIndex: 2
-            }}>
+        <div className="writing-container">
+            <div className="nav-container">
                 <Link href="/">
-                    <Button variant="secondary" className="back-button" style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem'
-                    }}>
-                        <ArrowLeft className="icon-left" size={16} />
+                    <Button variant="ghost" className="back-button">
+                        <ArrowLeft className="icon-left" />
                         Back to Home
                     </Button>
                 </Link>
 
-                <div className="profile-actions">
+                {user && (
+                    <div className="user-info">
+                        <Link href="/profile" className="profile-link">
+                            <User className="profile-icon" />
+                            <span className="username">{user.username}</span>
+                        </Link>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="logout-button"
+                            onClick={() => logout()}
+                        >
+                            <LogOut className="icon-left" size={14} />
+                            Logout
+                        </Button>
+                    </div>
+                )}
+
+                <ThemeToggle />
+            </div>
+
+            <div className="writing-content">
+
+                <div className="profile-actions" style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginBottom: '2rem'
+                }}>
                     <Link href="/writing">
-                        <Button variant="primary" className="write-button" style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            marginRight: '0.75rem'
-                        }}>
+                        <Button variant="primary" className="write-button">
                             <Plus className="icon-left" size={16} />
                             Write New Letter
                         </Button>
                     </Link>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="logout-button"
-                        onClick={() => logout()}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem'
-                        }}
-                    >
-                        <LogOut className="icon-left" size={14} />
-                        Logout
-                    </Button>
-                    <ThemeToggle />
-                </div>
-            </div>
-
-            <div className="profile-content">
-                <div className="profile-header">
-                    <h2 className="letters-title">Your Letters</h2>
                 </div>
 
-                {isLoading ? (
-                    <div className="loading-container">
-                        <LoadingSpinner size="medium" />
-                        <p className="loading-text">Loading your letters...</p>
-                    </div>
-                ) : error ? (
-                    <div className="error-message">{error}</div>
-                ) : letters.length === 0 ? (
-                    <div className="empty-state">
-                        <p>You haven't written any letters yet.</p>
-                        <Link href="/writing">
-                            <Button className="mt-4">Write Your First Letter</Button>
-                        </Link>
-                    </div>
-                ) : (
-                    <div className="letters-grid">
-                        {letters.map((letter) => (
-                            <Card key={letter.id} className="letter-card">
-                                <CardHeader>
-                                    <CardTitle className="letter-card-title">
-                                        {formatDate(letter.createdAt)}
-                                    </CardTitle>
-                                    <div className="letter-status">
-                                        {letter.isAnonymous ? 'Posted anonymously' : 'Posted publicly'}
-                                    </div>
-                                    {letter.emotion && (
-                                        <div className="letter-emotion" style={{
-                                            marginTop: '0.5rem',
-                                            fontStyle: 'italic',
+                <div className="profile-content">
+                    <h2 className="section-title" style={{
+                        fontFamily: 'var(--font-playfair), serif',
+                        fontSize: '1.75rem',
+                        marginBottom: '1rem'
+                    }}>Your Letters</h2>
+
+                    {isLoading ? (
+                        <div className="loading-container">
+                            <LoadingSpinner size="medium" />
+                            <p className="loading-text">Loading your letters...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="error-message">{error}</div>
+                    ) : letters.length === 0 ? (
+                        <div className="empty-state">
+                            <p>You haven't written any letters yet.</p>
+                            <Link href="/writing">
+                                <Button className="mt-4">Write Your First Letter</Button>
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="letters-grid">
+                            {letters.map((letter) => (
+                                <Card key={letter.id} className="letter-card">
+                                    <CardHeader>
+                                        <CardTitle className="letter-card-title">
+                                            {formatDate(letter.createdAt)}
+                                        </CardTitle>
+                                        <div className="letter-status" style={{
+                                            fontWeight: 'medium',
                                             fontSize: '0.85rem',
-                                            opacity: 0.9,
-                                            color: letter.color || 'inherit'
+                                            padding: '0.25rem 0.5rem',
+                                            borderRadius: '4px',
+                                            display: 'inline-block',
+                                            backgroundColor: letter.isAnonymous ? 'rgba(54, 191, 177, 0.1)' : 'rgba(110, 68, 255, 0.1)',
+                                            color: letter.isAnonymous ? 'rgb(54, 191, 177)' : 'rgb(110, 68, 255)'
                                         }}>
-                                            Feeling: {letter.emotion}
+                                            {letter.isAnonymous ? 'Posted anonymously' : 'Posted publicly'}
                                         </div>
-                                    )}
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="letter-preview">
-                                        {letter.content.length > 150
-                                            ? `${letter.content.substring(0, 150)}...`
-                                            : letter.content}
-                                    </p>
-                                    <div className="letter-actions">
-                                        <Link href={`/letters/${letter.id}`}>
-                                            <Button variant="secondary" size="sm">
-                                                Read Full Letter
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Star background for consistent look with other pages */}
-            <div className="star-background" style={{ zIndex: 1 }}>
-                <div className="stars">
-                    {Array.from({ length: 50 }).map((_, i) => (
-                        <div
-                            key={i}
-                            className="background-star"
-                            style={{
-                                top: `${Math.random() * 100}%`,
-                                left: `${Math.random() * 100}%`,
-                                width: `${Math.random() * 3 + 1}px`,
-                                height: `${Math.random() * 3 + 1}px`,
-                                animationDelay: `${Math.random() * 5}s`
-                            }}
-                        />
-                    ))}
+                                        {letter.emotion && (
+                                            <div className="letter-emotion" style={{
+                                                marginTop: '0.5rem',
+                                                fontStyle: 'italic',
+                                                fontSize: '0.85rem',
+                                                opacity: 0.9,
+                                                color: letter.color || 'inherit'
+                                            }}>
+                                                Feeling: {letter.emotion}
+                                            </div>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="letter-preview">
+                                            {letter.content.length > 150
+                                                ? `${letter.content.substring(0, 150)}...`
+                                                : letter.content}
+                                        </p>
+                                        <div className="letter-actions">
+                                            <Link href={`/letters/${letter.id}`}>
+                                                <Button variant="secondary" size="sm">
+                                                    Read Full Letter
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Add the StarBackground component */}
+            <StarBackground />
         </div>
     )
 } 

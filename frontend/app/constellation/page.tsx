@@ -14,6 +14,8 @@ import { api } from '@/lib/api';
 import { unifiedApi } from '@/lib/unified-api';
 import { ConstellationCanvas, ConstellationControlsRef } from '@/components/visualization/ConstellationCanvas';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { X as XIcon } from 'lucide-react';
+import SimilarLetters from '@/components/letters/similar-letters';
 
 const VALID_EMOTIONS = [
     'happy',
@@ -98,8 +100,13 @@ export default function ConstellationPage() {
     const [searchResults, setSearchResults] = useState<Array<{ id: string, username: string }>>([]);
     const [isSearching, setIsSearching] = useState(false);
 
-    // Add state for cached usernames
-    const [cachedUsernames, setCachedUsernames] = useState<Array<{ id: string, username: string }>>([]);
+    // Add state to track which users have been manually searched for and should appear in the filter
+    const [selectedUserFilters, setSelectedUserFilters] = useState<Array<{ id: string, username: string }>>([]);
+
+    // Add these state variables in the main component
+    const [selectedLetterId, setSelectedLetterId] = useState<string | null>(null);
+    const [selectedLetterData, setSelectedLetterData] = useState<any | null>(null);
+    const [isLoadingLetter, setIsLoadingLetter] = useState(false);
 
     useEffect(() => {
         // Fetch all letters and create the constellation
@@ -186,39 +193,104 @@ export default function ConstellationPage() {
         setShowInfo(!showInfo);
     };
 
-    // Update applyFiltersAndTransform to use similarity data for positioning
-    const applyFiltersAndTransform = (lettersToFilter: any[]) => {
-        let filteredLetters = lettersToFilter;
+    // Add a function to handle user filter selection
+    const handleFilterByUser = (username: string, userId: string | null = null) => {
+        // If clicking on a search result, add it to selected filters
+        if (userId && username !== 'Anonymous') {
+            const existingFilter = selectedUserFilters.find(f => f.id === userId);
 
-        if (filterByUser) {
-            filteredLetters = filteredLetters.filter(letter =>
-                letter.userId === filterByUser ||
-                (filterByUser === 'Anonymous' && !letter.userId)
-            );
+            if (!existingFilter) {
+                setSelectedUserFilters(prev => [...prev, { id: userId, username }]);
+            }
         }
 
-        if (filterByEmotion) {
+        // If anonymous, use 'Anonymous' as the ID
+        const actualUserId = (username === 'Anonymous') ? 'Anonymous' : userId;
+
+        // Calculate new filter value directly (don't rely on state update)
+        const newFilterValue = filterByUser === actualUserId ? null : actualUserId;
+
+        // Set the state for future reference
+        setFilterByUser(newFilterValue);
+
+        // Clear search when filter is applied
+        setUserSearchTerm('');
+        setSearchResults([]);
+
+        // Apply filters with the new value directly
+        applyFiltersWithValue(allLetters, newFilterValue, filterByEmotion);
+    };
+
+    // Add function to remove a user filter
+    const removeUserFilter = (userId: string) => {
+        // Remove from selected filters
+        setSelectedUserFilters(prev => prev.filter(filter => filter.id !== userId));
+
+        // If this was the active filter, clear it
+        if (filterByUser === userId) {
+            setFilterByUser(null);
+            applyFiltersAndTransform(allLetters);
+        }
+    };
+
+    // Add a function to toggle the filter panel
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
+    // Get unique emotions from the letters
+    const getUniqueEmotions = () => {
+        if (!allLetters.length) return [];
+
+        const emotions = new Set<string>();
+        allLetters.forEach(letter => {
+            if (letter.emotion) {
+                emotions.add(letter.emotion);
+            }
+        });
+
+        return Array.from(emotions).sort();
+    };
+
+    // Add the emotion filter handler
+    const handleFilterByEmotion = (emotion: string) => {
+        // Calculate new filter value directly
+        const newFilterValue = filterByEmotion === emotion ? null : emotion;
+
+        // Set the state for future reference
+        setFilterByEmotion(newFilterValue);
+
+        // Apply filters with the new value directly
+        applyFiltersWithValue(allLetters, filterByUser, newFilterValue);
+    };
+
+    // New function that applies filters with explicit values
+    const applyFiltersWithValue = (lettersToFilter: any[], userFilter: string | null, emotionFilter: string | null) => {
+        let filteredLetters = lettersToFilter;
+
+        if (userFilter) {
+            if (userFilter === 'Anonymous') {
+                // Show only letters that are marked as anonymous regardless of userId
+                filteredLetters = filteredLetters.filter(letter => letter.isAnonymous === true);
+            } else {
+                // When filtering by a specific user, show ONLY their non-anonymous letters
+                filteredLetters = filteredLetters.filter(letter =>
+                    letter.userId === userFilter && letter.isAnonymous === false
+                );
+            }
+        }
+
+        if (emotionFilter) {
             filteredLetters = filteredLetters.filter(letter =>
-                letter.emotion === filterByEmotion
+                letter.emotion === emotionFilter
             );
         }
 
         const positions = calculateClusteredPositions(filteredLetters);
 
         const starLetters = filteredLetters.map((letter) => {
-            // Initialize username as Anonymous by default
-            let username = 'Anonymous';
-
-            // Only show username if letter is not anonymous and has a userId
-            if (!letter.isAnonymous && letter.userId) {
-                // Try to find username in cached usernames
-                const cachedUser = cachedUsernames.find(u => u.id === letter.userId);
-                if (cachedUser) {
-                    username = cachedUser.username;
-                } else if (letter.username) {
-                    username = letter.username;
-                }
-            }
+            // Set username based on anonymity flag, not based on the presence of userId
+            const username = letter.isAnonymous === true ? 'Anonymous' : (letter.username || 'Unknown User');
 
             return {
                 id: letter.id,
@@ -231,12 +303,18 @@ export default function ConstellationPage() {
                 username: username,
                 emotion: letter.emotion || 'unknown',
                 created_at: letter.createdAt || letter.created_at,
-                userId: letter.userId
+                userId: letter.userId,
+                isAnonymous: letter.isAnonymous
             };
         });
 
         setLetters(starLetters);
         setLoading(false);
+    };
+
+    // Modify the existing function to use the new one
+    const applyFiltersAndTransform = (lettersToFilter: any[]) => {
+        applyFiltersWithValue(lettersToFilter, filterByUser, filterByEmotion);
     };
 
     // Function to calculate clustered positions based on similarity
@@ -301,65 +379,49 @@ export default function ConstellationPage() {
         return positions;
     };
 
-    // Add a function to handle user filter selection
-    const handleFilterByUser = (username: string) => {
-        const user = searchResults.find(u => u.username === username);
-        const userId = user ? user.id : null;
-
-        if (filterByUser === userId) {
-            setFilterByUser(null); // Toggle off if already selected
-        } else {
-            setFilterByUser(userId);
-        }
-
-        // Apply filters to all letters
-        applyFiltersAndTransform(allLetters);
-    };
-
-    // Add a function to toggle the filter panel
-    const toggleFilters = () => {
-        setShowFilters(!showFilters);
-    };
-
-    // Get unique userIds for the filter
+    // Get unique userIds for the filter - only display Anonymous by default
     const getUniqueUserIds = () => {
-        if (!allLetters.length) return [];
+        // Create array to hold user filter options
+        const users: Array<{ id: string, username: string }> = [];
+        let hasAnonymous = false;
 
-        const userIds = new Set<string>();
+        // Check if we have any anonymous letters based on isAnonymous flag
         allLetters.forEach(letter => {
-            userIds.add(letter.userId || 'Anonymous');
-        });
-
-        return Array.from(userIds).sort();
-    };
-
-    // Add the emotion filter handler
-    const handleFilterByEmotion = (emotion: string) => {
-        if (filterByEmotion === emotion) {
-            setFilterByEmotion(null); // Toggle off if already selected
-        } else {
-            setFilterByEmotion(emotion);
-        }
-
-        // Apply filters to all letters
-        applyFiltersAndTransform(allLetters);
-    };
-
-    // Get unique emotions from the letters
-    const getUniqueEmotions = () => {
-        if (!allLetters.length) return [];
-
-        const emotions = new Set<string>();
-        allLetters.forEach(letter => {
-            if (letter.emotion) {
-                emotions.add(letter.emotion);
+            if (letter.isAnonymous === true) {
+                hasAnonymous = true;
             }
         });
 
-        return Array.from(emotions).sort();
+        // Add anonymous at the beginning if it exists
+        if (hasAnonymous) {
+            users.push({ id: 'Anonymous', username: 'Anonymous' });
+        }
+
+        // Add non-anonymous user filters
+        const uniqueUsers = new Map<string, string>();
+
+        allLetters.forEach(letter => {
+            if (letter.isAnonymous !== true && letter.userId && letter.username) {
+                uniqueUsers.set(letter.userId, letter.username);
+            }
+        });
+
+        // Convert Map to array and add to users
+        Array.from(uniqueUsers.entries()).forEach(([userId, username]) => {
+            users.push({ id: userId, username });
+        });
+
+        // Add any manually selected user filters that weren't included yet
+        selectedUserFilters.forEach(user => {
+            if (!users.some(u => u.id === user.id)) {
+                users.push(user);
+            }
+        });
+
+        return users;
     };
 
-    // Update searchUsers to cache results
+    // Simplify searchUsers to not cache results
     const searchUsers = useCallback(async (term: string) => {
         if (term.trim().length < 2) {
             setSearchResults([]);
@@ -370,19 +432,12 @@ export default function ConstellationPage() {
         try {
             const results = await unifiedApi.auth.searchUsers(term);
             setSearchResults(results);
-            // Cache the results
-            setCachedUsernames(prev => [...prev, ...results.filter(r => !prev.some(p => p.id === r.id))]);
         } catch (error) {
             console.error('Error searching users:', error);
         } finally {
             setIsSearching(false);
         }
     }, []);
-
-    // Function to remove a cached username
-    const removeCachedUsername = (username: string) => {
-        setCachedUsernames(prev => prev.filter(user => user.username !== username));
-    };
 
     // Add debounce for search term changes
     useEffect(() => {
@@ -406,6 +461,26 @@ export default function ConstellationPage() {
             </CardContent>
         </Card>
     );
+
+    // Add a function to handle star clicks
+    const handleStarClick = async (letterId: string) => {
+        setSelectedLetterId(letterId);
+        setIsLoadingLetter(true);
+
+        try {
+            const letter = await api.letters.getById(letterId);
+            setSelectedLetterData(letter);
+        } catch (error) {
+            console.error('Error loading letter:', error);
+        } finally {
+            setIsLoadingLetter(false);
+        }
+    };
+
+    // Add this to pass to the ConstellationCanvas
+    const handleSelectLetter = (id: string) => {
+        handleStarClick(id);
+    };
 
     return (
         <div className="constellation-fullscreen" style={{
@@ -434,6 +509,7 @@ export default function ConstellationPage() {
                         letters={letters}
                         controlsRef={controlsRef}
                         similarityData={similarityData}
+                        onSelectLetter={handleSelectLetter}
                     />
                 </div>
             )}
@@ -615,7 +691,7 @@ export default function ConstellationPage() {
                                 flexWrap: 'wrap',
                                 gap: '8px'
                             }}>
-                                {/* Show search results when search term exists, otherwise show all unique userIds */}
+                                {/* Show search results when search term exists, otherwise show unique userIds */}
                                 {userSearchTerm.trim().length >= 2
                                     ? searchResults.map(user => (
                                         <div key={user.id} style={{ display: 'flex', alignItems: 'center' }}>
@@ -623,36 +699,36 @@ export default function ConstellationPage() {
                                                 variant={filterByUser === user.id ? "primary" : "outline"}
                                                 size="sm"
                                                 className="filter-button"
-                                                onClick={() => handleFilterByUser(user.username)}
+                                                onClick={() => handleFilterByUser(user.username, user.id)}
                                             >
                                                 <User size={14} className="mr-1" />
                                                 {user.username}
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => removeCachedUsername(user.username)}>
-                                                <X size={12} />
-                                            </Button>
                                         </div>
                                     ))
-                                    : getUniqueUserIds().map(userId => {
-                                        const user = searchResults.find(u => u.id === userId);
-                                        const username = user ? user.username : 'Anonymous';
-                                        return (
-                                            <div key={userId} style={{ display: 'flex', alignItems: 'center' }}>
+                                    : getUniqueUserIds().map(user => (
+                                        <div key={user.id} style={{ display: 'flex', alignItems: 'center' }}>
+                                            <Button
+                                                variant={filterByUser === user.id ? "primary" : "outline"}
+                                                size="sm"
+                                                className="filter-button"
+                                                onClick={() => handleFilterByUser(user.username, user.id)}
+                                            >
+                                                <User size={14} className="mr-1" />
+                                                {user.username}
+                                            </Button>
+                                            {/* Show remove button for all except Anonymous */}
+                                            {user.username !== 'Anonymous' && (
                                                 <Button
-                                                    variant={filterByUser === userId ? "primary" : "outline"}
-                                                    size="sm"
-                                                    className="filter-button"
-                                                    onClick={() => handleFilterByUser(username)}
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => removeUserFilter(user.id)}
                                                 >
-                                                    <User size={14} className="mr-1" />
-                                                    {username}
-                                                </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => removeCachedUsername(username)}>
                                                     <X size={12} />
                                                 </Button>
-                                            </div>
-                                        );
-                                    })
+                                            )}
+                                        </div>
+                                    ))
                                 }
 
                                 {userSearchTerm.trim().length >= 2 && searchResults.length === 0 && !isSearching && (
@@ -856,6 +932,125 @@ export default function ConstellationPage() {
                                 Write the first letter
                             </Button>
                         </Link>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal for letter view */}
+            {selectedLetterId && (
+                <div className="letter-modal-overlay"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        zIndex: 100,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backdropFilter: 'blur(5px)',
+                        animation: 'fadeIn 0.3s ease-out'
+                    }}>
+                    <div className="letter-modal"
+                        style={{
+                            position: 'relative',
+                            width: '90%',
+                            maxWidth: '600px',
+                            maxHeight: '80vh',
+                            overflow: 'auto',
+                            backgroundColor: 'rgba(10, 10, 20, 0.9)',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+                            padding: '20px',
+                            animation: 'slideUp 0.3s ease-out'
+                        }}>
+                        <button
+                            onClick={() => setSelectedLetterId(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '10px',
+                                right: '10px',
+                                background: 'none',
+                                border: 'none',
+                                color: 'white',
+                                fontSize: '24px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                backgroundColor: 'rgba(20, 20, 30, 0.6)',
+                                transition: 'background-color 0.2s'
+                            }}>
+                            <XIcon size={20} />
+                        </button>
+
+                        {isLoadingLetter ? (
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                height: '300px'
+                            }}>
+                                <LoadingSpinner size="large" />
+                            </div>
+                        ) : selectedLetterData ? (
+                            <div>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '15px',
+                                    borderLeft: `4px solid ${selectedLetterData.color || '#6e44ff'}`,
+                                    paddingLeft: '10px'
+                                }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>
+                                            {selectedLetterData.isAnonymous === true ? 'Anonymous' : (selectedLetterData.username || 'Unknown User')}
+                                        </h3>
+                                        {selectedLetterData.emotion && (
+                                            <div style={{
+                                                fontSize: '0.9rem',
+                                                opacity: 0.8,
+                                                color: selectedLetterData.color || '#6e44ff'
+                                            }}>
+                                                Feeling: {selectedLetterData.emotion}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+                                        {new Date(selectedLetterData.createdAt).toLocaleDateString()}
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    fontSize: '1rem',
+                                    lineHeight: '1.6',
+                                    whiteSpace: 'pre-wrap'
+                                }}>
+                                    {selectedLetterData.content}
+                                </div>
+
+                                {/* Add similar letters section if available */}
+                                <div style={{ marginTop: '30px' }}>
+                                    {/* typeof SimilarLetters !== 'undefined' ? (
+                                        <SimilarLetters query={selectedLetterId} isLetterId={true} limit={3} threshold={0.6} />
+                                    ) : (
+                                        <div style={{ textAlign: 'center', padding: '15px', opacity: 0.7 }}>
+                                            Related letters will appear here
+                                        </div>
+                                    )} */}
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '30px' }}>
+                                Letter not found or an error occurred.
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

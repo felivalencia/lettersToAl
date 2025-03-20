@@ -1,0 +1,34 @@
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes glow {
+    0% { box-shadow: 0 0 5px rgba(110, 68, 255, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(110, 68, 255, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(110, 68, 255, 0.5); }
+}
+
+.letter-modal-overlay {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.letter-modal {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Add hover effect for the close button */
+.letter-modal button:hover {
+    background-color: rgba(40, 40, 60, 0.8) !important;
+} 

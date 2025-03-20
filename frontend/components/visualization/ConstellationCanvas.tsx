@@ -14,15 +14,16 @@ type StarProps = {
     id: string;
     username: string;
     emotion?: string;
+    isAnonymous?: boolean;
     connections: Array<{
         position: [number, number, number];
         similarity?: number;
     }>;
-    onHover: (id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean) => void;
+    onHover: (id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean, isAnonymous?: boolean) => void;
+    onSelectLetter?: (id: string) => void;
 };
 
-const Star = ({ position, color, size, id, username, emotion, connections, onHover }: StarProps) => {
-    const router = useRouter();
+const Star = ({ position, color, size, id, username, emotion, isAnonymous, connections, onHover, onSelectLetter }: StarProps) => {
     const [hovered, setHovered] = useState(false);
     const starRef = useRef<THREE.Mesh>(null);
 
@@ -31,18 +32,20 @@ const Star = ({ position, color, size, id, username, emotion, connections, onHov
     const emissiveIntensity = hovered ? 2.0 : 1.2;
 
     const handleClick = useCallback(() => {
-        router.push(`/letters/${id}`);
-    }, [router, id]);
+        if (onSelectLetter) {
+            onSelectLetter(id);
+        }
+    }, [id, onSelectLetter]);
 
     // Handle hover state
     const handlePointerOver = () => {
         setHovered(true);
-        onHover(id, username, emotion, position, true);
+        onHover(id, username, emotion, position, true, isAnonymous);
     };
 
     const handlePointerOut = () => {
         setHovered(false);
-        onHover(id, username, emotion, position, false);
+        onHover(id, username, emotion, position, false, isAnonymous);
     };
 
     return (
@@ -150,14 +153,16 @@ const Scene = ({
     onStarHover,
     hoveredStar,
     onUpdatePosition,
-    similarityData
+    similarityData,
+    onSelectLetter
 }: {
     starData: Array<any>,
     orbitControlsRef: React.RefObject<any>,
-    onStarHover: (id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean) => void,
-    hoveredStar: { id: string, username: string, emotion?: string, position: [number, number, number] } | null,
+    onStarHover: (id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean, isAnonymous?: boolean) => void,
+    hoveredStar: { id: string, username: string, emotion?: string, position: [number, number, number], isAnonymous?: boolean } | null,
     onUpdatePosition: (position: { x: number, y: number } | null) => void,
-    similarityData?: Record<string, Array<{ id: string, similarity: number }>>
+    similarityData?: Record<string, Array<{ id: string, similarity: number }>>,
+    onSelectLetter?: (id: string) => void
 }) => {
     const { camera, gl } = useThree();
     const starsGroup = useRef<THREE.Group>(null);
@@ -280,8 +285,10 @@ const Scene = ({
                     size={star.size}
                     username={star.username}
                     emotion={star.emotion}
+                    isAnonymous={star.isAnonymous}
                     connections={star.connections}
                     onHover={onStarHover}
+                    onSelectLetter={onSelectLetter}
                 />
             ))}
 
@@ -315,7 +322,7 @@ export type ConstellationControlsRef = {
     rotateTo: (x: number, y: number, z: number) => void;
 };
 
-interface ConstellationCanvasProps {
+export interface ConstellationCanvasProps {
     letters: Array<{
         id: string;
         x: number;
@@ -326,13 +333,20 @@ interface ConstellationCanvasProps {
         content: string;
         username: string;
         emotion?: string;
+        isAnonymous?: boolean;
     }>;
-    controlsRef?: React.RefObject<ConstellationControlsRef>;
+    controlsRef: React.RefObject<ConstellationControlsRef>;
     similarityData?: Record<string, Array<{ id: string, similarity: number }>>;
+    onSelectLetter?: (id: string) => void;
 }
 
-export function ConstellationCanvas({ letters, controlsRef, similarityData = {} }: ConstellationCanvasProps) {
-    const [hoveredStar, setHoveredStar] = useState<{ id: string, username: string, emotion?: string, position: [number, number, number] } | null>(null);
+export function ConstellationCanvas({
+    letters,
+    controlsRef,
+    similarityData = {},
+    onSelectLetter
+}: ConstellationCanvasProps) {
+    const [hoveredStar, setHoveredStar] = useState<{ id: string, username: string, emotion?: string, position: [number, number, number], isAnonymous?: boolean } | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState<{ x: number, y: number } | null>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const orbitControlsRef = useRef<OrbitControlsImpl>(null);
@@ -358,9 +372,9 @@ export function ConstellationCanvas({ letters, controlsRef, similarityData = {} 
         };
     }, []);
 
-    const handleStarHover = useCallback((id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean) => {
+    const handleStarHover = useCallback((id: string, username: string, emotion: string | undefined, position: [number, number, number], isHovered: boolean, isAnonymous?: boolean) => {
         if (isHovered) {
-            setHoveredStar({ id, username, emotion, position });
+            setHoveredStar({ id, username, emotion, position, isAnonymous });
         } else {
             setHoveredStar(prev => prev?.id === id ? null : prev);
         }
@@ -442,6 +456,7 @@ export function ConstellationCanvas({ letters, controlsRef, similarityData = {} 
                     hoveredStar={hoveredStar}
                     onUpdatePosition={handleUpdatePosition}
                     similarityData={similarityData}
+                    onSelectLetter={onSelectLetter}
                 />
             </Canvas>
 
