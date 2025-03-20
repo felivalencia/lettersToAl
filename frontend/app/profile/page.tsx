@@ -139,25 +139,26 @@ export default function ProfilePage() {
 
             <div className="writing-content">
 
-                <div className="profile-actions" style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    marginBottom: '2rem'
-                }}>
-                    <Link href="/writing">
-                        <Button variant="primary" className="write-button">
-                            <Plus className="icon-left" size={16} />
-                            Write New Letter
-                        </Button>
-                    </Link>
-                </div>
-
                 <div className="profile-content">
-                    <h2 className="section-title" style={{
-                        fontFamily: 'var(--font-playfair), serif',
-                        fontSize: '1.75rem',
-                        marginBottom: '1rem'
-                    }}>Your Letters</h2>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '1.5rem'
+                    }}>
+                        <h2 className="section-title" style={{
+                            fontFamily: 'var(--font-playfair), serif',
+                            fontSize: '1.75rem',
+                            margin: 0
+                        }}>Your Letters</h2>
+
+                        <Link href="/writing">
+                            <Button variant="primary" className="write-button">
+                                <Plus className="icon-left" size={16} />
+                                Write New Letter
+                            </Button>
+                        </Link>
+                    </div>
 
                     {isLoading ? (
                         <div className="loading-container">
@@ -174,7 +175,11 @@ export default function ProfilePage() {
                             </Link>
                         </div>
                     ) : (
-                        <div className="letters-grid">
+                        <div className="letters-grid" style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: '1.5rem'
+                        }}>
                             {letters.map((letter) => (
                                 <Card key={letter.id} className="letter-card">
                                     <CardHeader>
