@@ -109,31 +109,29 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { content, emotion, color, location, isAnonymous } = req.body;
 
-        // If letter is not anonymous, require authentication
-        if (!isAnonymous) {
-            const token = req.cookies.auth_token;
+        // Always try to get the user auth token for both anonymous and non-anonymous letters
+        const token = req.cookies.auth_token;
 
-            if (!token) {
-                return res.status(401).json({ error: 'Authentication required for non-anonymous letters' });
-            }
-
+        if (token) {
             const user = await authService.verifyToken(token);
-
-            if (!user) {
-                res.clearCookie('auth_token');
-                return res.status(401).json({ error: 'Invalid or expired token' });
+            if (user) {
+                req.user = user;
             }
-
-            req.user = user;
         }
 
+        // If letter is not anonymous, require authentication
+        if (isAnonymous === false && !req.user) {
+            return res.status(401).json({ error: 'Authentication required for non-anonymous letters' });
+        }
+
+        // Map the frontend isAnonymous to the database is_anonymous field
         const letter = await letterService.createLetter({
             content,
             emotion,
             color,
             location,
             userId: req.user?.id || null,
-            isAnonymous: isAnonymous || !req.user?.id
+            is_anonymous: isAnonymous !== false // Default to true if isAnonymous is not explicitly false
         });
 
         res.status(201).json(letter);

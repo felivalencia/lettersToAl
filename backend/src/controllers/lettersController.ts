@@ -2,16 +2,40 @@ import { Request, Response } from 'express';
 import { supabase } from '../utils/supabaseClient';
 import { generateEmbedding } from '../services/clusteringService';
 
+// Define AuthenticatedRequest interface here to avoid circular dependency
+interface AuthenticatedRequest extends Request {
+    user?: { id: string };
+}
+
 /**
  * Create a new letter
  * @route POST /api/letters
  */
-export const createLetter = async (req: Request, res: Response) => {
+export const createLetter = async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const { content, drawing, anonymous = true } = req.body;
+        const { content, drawing, is_anonymous = true, author_id = null } = req.body;
 
         if (!content) {
             return res.status(400).json({ error: 'Letter content is required' });
+        }
+
+        // Determine the correct user_id 
+        // If we're using the auth middleware, it might be in req.user.id
+        const userId = req.user?.id || author_id || null;
+
+        // If we have a userId and the letter is not anonymous, lookup the username
+        let username = null;
+        if (userId) {
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('username')
+                .eq('id', userId)
+                .single();
+
+            if (!userError && userData) {
+                // Store the username for non-anonymous letters
+                username = userData.username;
+            }
         }
 
         // Insert letter without embedding initially
@@ -21,7 +45,9 @@ export const createLetter = async (req: Request, res: Response) => {
                 {
                     content,
                     drawing: drawing || null,
-                    anonymous
+                    is_anonymous,
+                    user_id: userId,
+                    username: is_anonymous ? null : username  // Set username directly in the database
                 }
             ])
             .select()
@@ -55,6 +81,15 @@ export const createLetter = async (req: Request, res: Response) => {
     }
 };
 
+// Utility function to get username from users data
+const getUsernameFromAuthors = (userData: any): string => {
+    if (!userData) return 'Unknown User';
+    if (Array.isArray(userData)) {
+        return userData[0]?.username || 'Unknown User';
+    }
+    return userData.username || 'Unknown User';
+};
+
 /**
  * Get a letter by ID
  * @route GET /api/letters/:id
@@ -70,9 +105,9 @@ export const getLetterById = async (req: Request, res: Response) => {
                 content, 
                 drawing, 
                 created_at, 
-                anonymous,
-                author_id,
-                users:author_id (
+                is_anonymous,
+                user_id,
+                users:user_id (
                     id,
                     username
                 ),
@@ -92,28 +127,57 @@ export const getLetterById = async (req: Request, res: Response) => {
         }
 
         if (letter) {
+            // Log the letter data for debugging
+            console.log(`Letter ${letter.id} details:`, {
+                id: letter.id,
+                is_anonymous: letter.is_anonymous,
+                user_id: letter.user_id,
+                users: letter.users,
+                content_preview: letter.content?.substring(0, 30) + '...'
+            });
+
             // Transform letter to match frontend expected format
             const transformedLetter: any = {
                 id: letter.id,
                 content: letter.content,
                 drawing: letter.drawing,
                 createdAt: letter.created_at,
-                isAnonymous: letter.anonymous,
+                isAnonymous: letter.is_anonymous,
                 embedding: letter.embedding,
                 emotion: letter.emotion,
                 color: letter.color,
                 location: letter.location
             };
 
-            // Set username and userId only if not anonymous
-            if (!letter.anonymous && letter.users) {
-                // @ts-ignore - Extract username from the joined user data
-                transformedLetter.username = letter.users.username;
-                // Preserve userId for non-anonymous letters
-                transformedLetter.userId = letter.author_id;
+            // Set username based on anonymity but always include userId
+            if (!letter.is_anonymous && letter.users) {
+                // Extract username from the joined user data
+                transformedLetter.username = getUsernameFromAuthors(letter.users);
+            } else if (!letter.is_anonymous) {
+                // If not anonymous but users data is missing, try to load the username
+                transformedLetter.username = "Loading...";  // Temporary placeholder
+                // We'll fetch the username separately if users join didn't work
+                try {
+                    const { data: userData } = await supabase
+                        .from('users')
+                        .select('username')
+                        .eq('id', letter.user_id)
+                        .single();
+
+                    if (userData && userData.username) {
+                        transformedLetter.username = userData.username;
+                    } else {
+                        transformedLetter.username = 'Unknown User';
+                    }
+                } catch (userError) {
+                    console.error('Error fetching username:', userError);
+                    transformedLetter.username = 'Unknown User';
+                }
             } else {
                 transformedLetter.username = 'Anonymous';
             }
+            // Always include userId for all letters
+            transformedLetter.userId = letter.user_id;
 
             res.json(transformedLetter);
         } else {
@@ -194,9 +258,9 @@ export const getAllLetters = async (req: Request, res: Response) => {
                 content, 
                 drawing, 
                 created_at, 
-                anonymous,
-                author_id,
-                users:author_id (
+                is_anonymous,
+                user_id,
+                users:user_id (
                     id,
                     username
                 ),
@@ -211,33 +275,67 @@ export const getAllLetters = async (req: Request, res: Response) => {
             throw error;
         }
 
-        // Transform the data for client-side use
-        const transformedLetters = letters.map(letter => {
+        // Transform the data for client-side use with parallel async operations
+        const transformPromises = letters.map(async (letter) => {
+            // Log the letter data to diagnose the issue
+            console.log(`Letter ${letter.id} data:`, {
+                id: letter.id,
+                is_anonymous: letter.is_anonymous,
+                user_id: letter.user_id,
+                users: letter.users,
+                content_preview: letter.content?.substring(0, 30) + '...'
+            });
+
             // Create a standardized letter object
             const transformedLetter: any = {
                 id: letter.id,
                 content: letter.content,
                 drawing: letter.drawing,
                 createdAt: letter.created_at,
-                isAnonymous: letter.anonymous,
+                isAnonymous: letter.is_anonymous,
                 embedding: letter.embedding,
                 emotion: letter.emotion,
                 color: letter.color,
                 location: letter.location
             };
 
-            // Add username and userId only if not anonymous
-            if (!letter.anonymous && letter.users) {
-                // @ts-ignore - Extract username from the joined user data
-                transformedLetter.username = letter.users.username;
-                // Preserve userId for non-anonymous letters
-                transformedLetter.userId = letter.author_id;
+            // Set username based on anonymity but always include userId
+            if (!letter.is_anonymous && letter.users) {
+                // Extract username from the joined user data
+                transformedLetter.username = getUsernameFromAuthors(letter.users);
+            } else if (!letter.is_anonymous) {
+                // If not anonymous but users data is missing, try to load the username
+                transformedLetter.username = "Loading...";  // Temporary placeholder
+
+                // We'll fetch the username separately if users join didn't work
+                try {
+                    const { data: userData } = await supabase
+                        .from('users')
+                        .select('username')
+                        .eq('id', letter.user_id)
+                        .single();
+
+                    if (userData && userData.username) {
+                        transformedLetter.username = userData.username;
+                    } else {
+                        transformedLetter.username = 'Unknown User';
+                    }
+                } catch (userError) {
+                    console.error('Error fetching username:', userError);
+                    transformedLetter.username = 'Unknown User';
+                }
             } else {
                 transformedLetter.username = 'Anonymous';
             }
 
+            // Always include userId for all letters
+            transformedLetter.userId = letter.user_id;
+
             return transformedLetter;
         });
+
+        // Wait for all transformations to complete
+        const transformedLetters = await Promise.all(transformPromises);
 
         res.json(transformedLetters);
     } catch (error) {
@@ -253,13 +351,16 @@ export const getAllLetters = async (req: Request, res: Response) => {
  */
 export const updateUsernames = async (req: Request, res: Response) => {
     try {
-        // Get all non-anonymous letters
+        // Get all non-anonymous letters with null usernames
         const { data: letters, error: fetchError } = await supabase
             .from('letters')
-            .select('*')
-            .eq('is_anonymous', false);
+            .select('id, user_id, username, is_anonymous')
+            .eq('is_anonymous', false)
+            .is('username', null);
 
         if (fetchError) throw fetchError;
+
+        console.log(`Found ${letters?.length || 0} non-anonymous letters with missing usernames`);
 
         let updatedCount = 0;
 
@@ -279,6 +380,8 @@ export const updateUsernames = async (req: Request, res: Response) => {
                 }
 
                 if (userData && userData.username) {
+                    console.log(`Updating letter ${letter.id} with username ${userData.username}`);
+
                     // Update the letter with the username
                     const { error: updateError } = await supabase
                         .from('letters')

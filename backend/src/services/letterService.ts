@@ -2,28 +2,31 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { analyzeEmotion } from './emotionService';
 import { generateEmbedding, calculateSimilarity } from './embeddingService';
 
-// Define interfaces for letter data
-interface Letter {
+// Type definitions for letters
+export interface Letter {
     id: string;
     content: string;
-    emotion?: string;
-    color?: string;
-    location?: string;
+    drawing?: string | null;
     userId?: string | null;
-    username?: string;
-    isAnonymous: boolean;
+    username?: string | null;
+    isAnonymous: boolean; // Keep this as isAnonymous for frontend compatibility
     embedding?: number[];
-    created_at: string;
+    emotion?: string | null;
+    color?: string | null;
+    location?: string | null;
+    createdAt: string;
 }
 
-interface CreateLetterData {
+// Type definitions for createLetter parameters
+export interface CreateLetterData {
     content: string;
-    emotion?: string;
-    color?: string;
-    location?: string;
+    drawing?: string | null;
     userId?: string | null;
-    isAnonymous: boolean;
-    embedding?: number[];
+    is_anonymous?: boolean; // Use is_anonymous to match database schema
+    emotion?: string | null;
+    color?: string | null;
+    location?: string | null;
+    embedding?: number[] | null;
 }
 
 // Helper function to get Supabase client when needed
@@ -53,59 +56,51 @@ function getSupabaseClient(): SupabaseClient {
  * @param {CreateLetterData} letterData - The letter data
  * @returns {Promise<Letter>} - The created letter
  */
-export async function createLetter(letterData: CreateLetterData): Promise<Letter> {
-    const supabase = getSupabaseClient();
-
-    if (!supabase) {
-        throw new Error('Supabase client not initialized');
-    }
-
-    let username = null;
-
-    // If not anonymous, fetch the username
-    if (!letterData.isAnonymous && letterData.userId) {
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('username')
-            .eq('id', letterData.userId)
-            .single();
-
-        if (userError) {
-            console.error('Error fetching user:', userError);
-        } else if (userData) {
-            username = userData.username;
-        }
-    }
-
-    // Let's check if the letters table has the expected columns
+export const createLetter = async (letterData: CreateLetterData): Promise<Letter> => {
     try {
-        // First, attempt to describe the table structure
-        console.log('Attempting to write letter with data:', {
-            ...letterData,
-            content: letterData.content.substring(0, 20) + (letterData.content.length > 20 ? '...' : '')
-        });
+        // Ensure the basic required data is present
+        if (!letterData.content) {
+            throw new Error('Letter content is required');
+        }
 
-        // Perform parallel processing of emotion analysis and embedding generation
-        const [emotionPromise, embeddingPromise] = [
-            // Only analyze emotion if not already provided
-            (!letterData.emotion || !letterData.color) ? analyzeEmotion(letterData.content) : Promise.resolve(null),
+        // Generate embedding asynchronously and analyze emotion in parallel
+        const [embeddingPromise, emotionPromise] = [
             // Generate embedding
-            generateEmbedding(letterData.content)
+            generateEmbedding(letterData.content),
+            // Only analyze emotion if not already provided
+            !letterData.emotion ? analyzeEmotion(letterData.content) : Promise.resolve(null)
         ];
 
         // Wait for both processes to complete
-        const [emotionResult, embeddingResult] = await Promise.all([emotionPromise, embeddingPromise]);
+        const [embedding, emotionResult] = await Promise.all([embeddingPromise, emotionPromise]);
 
-        // Only use analyzed values if not already provided
+        // Use analyzed values if not already provided
+        let emotion = letterData.emotion;
+        let color = letterData.color;
+
         if (emotionResult) {
             console.log('Emotion analysis result:', emotionResult);
-            if (!letterData.emotion) letterData.emotion = emotionResult.emotion;
-            if (!letterData.color) letterData.color = emotionResult.color;
+            if (!emotion) emotion = emotionResult.emotion;
+            if (!color) color = emotionResult.color;
         }
 
-        // Store the embedding
-        if (embeddingResult && embeddingResult.length > 0) {
-            letterData.embedding = embeddingResult;
+        // Get username if userId is provided and letter is not anonymous
+        let username = null;
+        if (!letterData.is_anonymous && letterData.userId) {
+            const { data, error } = await getSupabaseClient()
+                .from('users')
+                .select('username')
+                .eq('id', letterData.userId)
+                .single();
+
+            if (!error && data) {
+                username = data.username;
+            }
+        }
+
+        // Generate random color if not provided
+        if (!color) {
+            color = generateRandomColor();
         }
 
         // Generate random location if not provided
@@ -116,12 +111,13 @@ export async function createLetter(letterData: CreateLetterData): Promise<Letter
         // Prepare letter data for database
         const dbLetterData = {
             content: letterData.content,
-            user_id: letterData.userId,
-            is_anonymous: letterData.isAnonymous,
-            emotional_vector: letterData.embedding, // Store embedding in the emotional_vector column
-            emotion: letterData.emotion,
-            color: letterData.color,
-            location: letterData.location
+            user_id: letterData.userId, // Always store userId even for anonymous letters
+            is_anonymous: letterData.is_anonymous, // Use is_anonymous to match the database schema
+            emotional_vector: letterData.embedding || embedding, // Store embedding in the emotional_vector column
+            emotion: emotion,
+            color: color,
+            location: letterData.location,
+            username: letterData.is_anonymous ? null : username // Set username for non-anonymous letters
         };
 
         console.log('Preparing letter for database:', {
@@ -131,7 +127,7 @@ export async function createLetter(letterData: CreateLetterData): Promise<Letter
         });
 
         // Insert the letter
-        const { data: insertedLetter, error: insertError } = await supabase
+        const { data: insertedLetter, error: insertError } = await getSupabaseClient()
             .from('letters')
             .insert([dbLetterData])
             .select()
@@ -150,22 +146,23 @@ export async function createLetter(letterData: CreateLetterData): Promise<Letter
         const letter: Letter = {
             id: insertedLetter.id,
             content: insertedLetter.content,
+            drawing: insertedLetter.drawing,
+            userId: insertedLetter.user_id,
+            username: letterData.is_anonymous ? 'Anonymous' : (username || undefined), // Show anonymous for anonymous letters
+            isAnonymous: insertedLetter.is_anonymous, // Use is_anonymous to match db schema
+            embedding: insertedLetter.emotional_vector,
             emotion: insertedLetter.emotion,
             color: insertedLetter.color,
             location: insertedLetter.location,
-            userId: insertedLetter.user_id,
-            username: username || undefined,
-            isAnonymous: insertedLetter.is_anonymous,
-            embedding: insertedLetter.emotional_vector,
-            created_at: insertedLetter.created_at
+            createdAt: insertedLetter.created_at
         };
 
         return letter;
     } catch (error) {
-        console.error('Error creating letter:', error);
+        console.error('Error in createLetter service:', error);
         throw error;
     }
-}
+};
 
 /**
  * Get all letters
@@ -200,10 +197,10 @@ export async function getAllLetters(): Promise<Letter[]> {
         color: letter.color,
         location: letter.location,
         userId: letter.user_id,
-        username: letter.username || 'Anonymous',
-        isAnonymous: letter.is_anonymous,
+        username: letter.is_anonymous ? 'Anonymous' : (letter.username || 'Unknown User'),
+        isAnonymous: letter.is_anonymous, // Use is_anonymous
         embedding: letter.emotional_vector,
-        created_at: letter.created_at
+        createdAt: letter.created_at
     }));
 }
 
@@ -242,10 +239,10 @@ export async function getLetterById(id: string): Promise<Letter | null> {
         color: data.color,
         location: data.location,
         userId: data.user_id,
-        username: data.username || 'Anonymous',
-        isAnonymous: data.is_anonymous,
+        username: data.is_anonymous ? 'Anonymous' : (data.username || 'Unknown User'),
+        isAnonymous: data.is_anonymous, // Use is_anonymous
         embedding: data.emotional_vector,
-        created_at: data.created_at
+        createdAt: data.created_at
     };
 }
 
@@ -284,23 +281,33 @@ export async function getLettersByUserId(userId: string): Promise<Letter[]> {
         color: letter.color,
         location: letter.location,
         userId: letter.user_id,
-        username: letter.username || 'Anonymous',
-        isAnonymous: letter.is_anonymous,
+        username: letter.is_anonymous ? 'Anonymous' : (letter.username || userId),
+        isAnonymous: letter.is_anonymous, // Use is_anonymous
         embedding: letter.emotional_vector,
-        created_at: letter.created_at
+        createdAt: letter.created_at
     }));
 }
 
-/**
- * Generate a random 3D location for the letter
- * @returns A string with x,y,z coordinates between -1 and 1
- */
-function generateRandomLocation(): string {
+// Helper functions for generating random values
+const generateRandomColor = (): string => {
+    // Generate a random pastel color
+    const colors = [
+        '#6e44ff', // Purple
+        '#4285f4', // Blue
+        '#36bfb1', // Teal
+        '#ff66c4', // Pink
+        '#ff9e44'  // Orange
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+};
+
+const generateRandomLocation = (): string => {
+    // Generate a random 3D location in normalized coordinates
     const x = (Math.random() * 2 - 1).toFixed(3);
     const y = (Math.random() * 2 - 1).toFixed(3);
     const z = (Math.random() * 2 - 1).toFixed(3);
     return `${x},${y},${z}`;
-}
+};
 
 /**
  * Find letters similar to a given letter or text
@@ -374,8 +381,8 @@ export async function findSimilarLetters(
                     color: item.color,
                     location: item.location,
                     userId: item.user_id,
-                    isAnonymous: item.is_anonymous,
-                    created_at: item.created_at,
+                    isAnonymous: item.is_anonymous, // Use is_anonymous
+                    createdAt: item.created_at,
                     similarity: item.similarity
                 }));
             }
@@ -450,9 +457,9 @@ export async function findSimilarLetters(
                 color: letter.color,
                 location: letter.location,
                 userId: letter.user_id,
-                isAnonymous: letter.is_anonymous,
+                isAnonymous: letter.is_anonymous, // Use is_anonymous
                 embedding: letter.emotional_vector,
-                created_at: letter.created_at,
+                createdAt: letter.created_at,
                 similarity
             };
         }).filter(letter => letter !== null);
